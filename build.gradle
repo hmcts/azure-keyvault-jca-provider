@@ -2,6 +2,7 @@ plugins {
   id 'java-library'
   id 'jacoco'
   id 'com.github.johnrengelman.shadow' version '2.0.3'
+  id 'checkstyle'
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
@@ -15,6 +16,21 @@ dependencies {
   // Use JUnit test framework
   testImplementation 'org.mockito:mockito-core:2.17.0'
   testImplementation 'junit:junit:4.12'
+}
+
+checkstyle.toolVersion = '7.2'
+checkstyle.configFile = new File(rootDir, "checkstyle.xml")
+
+// make build fail on Checkstyle issues (https://github.com/gradle/gradle/issues/881)
+tasks.withType(Checkstyle).each { checkstyleTask ->
+  checkstyleTask.doLast {
+    reports.all { report ->
+      def outputFile = report.destination
+      if (outputFile.exists() && outputFile.text.contains("<error ")) {
+        throw new GradleException("There were checkstyle warnings! For more info check $outputFile")
+      }
+    }
+  }
 }
 
 jacocoTestReport {

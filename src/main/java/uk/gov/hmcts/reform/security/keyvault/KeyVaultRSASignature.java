@@ -59,7 +59,7 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
      * @should throw exception
      */
     @Override
-    protected void engineUpdate(byte b) {
+    protected void engineUpdate(byte byt) {
         throw new UnsupportedOperationException();
     }
 
@@ -67,13 +67,13 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
      * @should throw exception if offset is not zero
      */
     @Override
-    protected void engineUpdate(byte[] b, int off, int len) {
+    protected void engineUpdate(byte[] bytes, int off, int len) {
         if (off != 0) {
             throw new UnsupportedOperationException();
         }
 
         data = new byte[len];
-        System.arraycopy(b, off, data, off, len - off);
+        System.arraycopy(bytes, off, data, off, len - off);
     }
 
     /**

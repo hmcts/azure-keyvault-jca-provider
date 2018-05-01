@@ -118,7 +118,6 @@ abstract class KeyVaultRSASignatureTest {
     @Test
     public void engineSign_shouldSignData() throws Exception {
 
-        byte[] rawData = "message".getBytes();
         KeyVaultRSAPrivateKey keyMock = mock(KeyVaultRSAPrivateKey.class);
         KeyOperationResult resultMock = mock(KeyOperationResult.class);
 
@@ -126,6 +125,7 @@ abstract class KeyVaultRSASignatureTest {
         given(vaultService.sign(eq("id"), eq(JsonWebKeySignatureAlgorithm.RS256), any())).willReturn(resultMock);
         given(resultMock.result()).willReturn(new byte[0]);
 
+        byte[] rawData = "message".getBytes();
         KeyVaultRSASignature keyVaultRSASignature = getMockInjectedSignature();
         keyVaultRSASignature.engineInitSign(keyMock);
         keyVaultRSASignature.engineUpdate(rawData, 0, rawData.length);
