@@ -1,0 +1,39 @@
+plugins {
+  id 'java-library'
+  id 'jacoco'
+  id 'com.github.johnrengelman.shadow' version '2.0.3'
+}
+
+group = 'uk.gov.hmcts.reform.security.keyvault'
+version = '0.0.1'
+
+dependencies {
+  implementation 'com.google.guava:guava:24.1-jre'
+  implementation 'com.microsoft.azure:azure-keyvault:1.0.0'
+  implementation 'com.microsoft.azure:adal4j:1.4.0'
+
+  // Use JUnit test framework
+  testImplementation 'org.mockito:mockito-core:2.17.0'
+  testImplementation 'junit:junit:4.12'
+}
+
+jacocoTestReport {
+  reports {
+    xml.enabled false
+    csv.enabled false
+  }
+}
+
+jacocoTestCoverageVerification {
+  violationRules {
+    rule {
+      limit {
+        minimum = 0.8
+      }
+    }
+  }
+}
+
+repositories {
+  jcenter()
+}
