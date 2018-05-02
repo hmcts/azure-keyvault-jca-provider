@@ -3,6 +3,7 @@ plugins {
   id 'jacoco'
   id 'com.github.johnrengelman.shadow' version '2.0.3'
   id 'checkstyle'
+  id 'org.owasp.dependencycheck' version '3.1.2'
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
@@ -11,7 +12,13 @@ version = '0.0.1'
 dependencies {
   implementation 'com.google.guava:guava:24.1-jre'
   implementation 'com.microsoft.azure:azure-keyvault:1.0.0'
-  implementation 'com.microsoft.azure:adal4j:1.4.0'
+  implementation 'com.microsoft.azure:adal4j:1.5.0'
+
+  // Azure-KeyVault dependency uses an older version of databind which
+  // has been flagged by the dependency-checker plugin
+  implementation('com.fasterxml.jackson.core:jackson-databind:2.9.5') {
+    force = true
+  }
 
   // Use JUnit test framework
   testImplementation 'org.mockito:mockito-core:2.17.0'
@@ -38,6 +45,15 @@ jacocoTestCoverageVerification {
       }
     }
   }
+}
+
+check.dependsOn dependencyCheckAnalyze
+// https://jeremylong.github.io/DependencyCheck/dependency-check-gradle/configuration.html
+dependencyCheck {
+  // Specifies if the build should be failed if a CVSS score above a specified level is identified.
+  // range of 0-10 fails the build, anything greater and it doesn't fail the build
+  failBuildOnCVSS = System.getProperty('dependencyCheck.failBuild') == 'false' ? 11 : 0
+  suppressionFile = 'config/dependency-check/dependency-check-suppressions.xml'
 }
 
 repositories {

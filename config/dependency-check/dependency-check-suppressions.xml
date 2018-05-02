@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.1.xsd">
+    <!-- We do receive input from users when authenticating so this rule does not apply -->
+    <suppress>
+        <notes><![CDATA[ file name: adal4j-1.5.0.jar]]></notes>
+        <gav regex="true">^com\.microsoft\.azure:adal4j:.*$</gav>
+        <cve>CVE-2013-1282</cve>
+    </suppress>
+</suppressions>
