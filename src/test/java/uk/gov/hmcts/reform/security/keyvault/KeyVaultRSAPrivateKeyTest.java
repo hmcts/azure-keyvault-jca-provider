@@ -4,7 +4,7 @@ import org.junit.Test;
 
 public class KeyVaultRSAPrivateKeyTest {
 
-    private final KeyVaultRSAPrivateKey PRIVATE_KEY = new KeyVaultRSAPrivateKey("id", "alg");
+    private static final KeyVaultRSAPrivateKey PRIVATE_KEY = new KeyVaultRSAPrivateKey("id", "alg");
 
     /**
      * @verifies throw exception

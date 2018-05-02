@@ -33,8 +33,8 @@ abstract class KeyVaultKey implements Key {
     // see JCA spec
     @Override
     public final byte[] getEncoded() {
-        byte[] b = getEncodedInternal();
-        return (b == null) ? null : b.clone();
+        byte[] encodedInternal = getEncodedInternal();
+        return (encodedInternal == null) ? null : encodedInternal.clone();
     }
 
     abstract byte[] getEncodedInternal();
