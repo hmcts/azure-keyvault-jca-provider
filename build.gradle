@@ -1,9 +1,11 @@
 plugins {
   id 'java-library'
+  id 'maven-publish'
   id 'jacoco'
   id 'com.github.johnrengelman.shadow' version '2.0.3'
   id 'checkstyle'
   id 'org.owasp.dependencycheck' version '3.1.2'
+  id 'com.jfrog.bintray' version '1.8.0'
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
@@ -56,6 +58,45 @@ dependencyCheck {
   suppressionFile = 'config/dependency-check/dependency-check-suppressions.xml'
 }
 
+publishing {
+  publications {
+    Main(MavenPublication) {
+      from components.java
+      artifact sourcesJar
+      artifact shadowJar
+      groupId project.group
+      artifactId rootProject.name
+      version project.version
+    }
+  }
+}
+
+bintray {
+  user = System.getenv('BINTRAY_USER')
+  key = System.getenv('BINTRAY_KEY')
+  publications = ['Main']
+  publish = true
+  pkg {
+    repo = 'hmcts-maven'
+    name = "${rootProject.name}"
+    userOrg = 'hmcts'
+    licenses = ['MIT']
+    vcsUrl = "https://github.com/hmcts/${rootProject.name}"
+    version {
+      name = project.version
+    }
+  }
+}
+
 repositories {
   jcenter()
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+  classifier = 'sources'
+  from sourceSets.main.allSource
+}
+
+artifacts {
+  archives sourcesJar
 }

@@ -1,16 +1,25 @@
 language: java
 before_cache:
-  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
-  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+- rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+- rm -fr $HOME/.gradle/caches/*/plugin-resolution/
 cache:
   directories:
-    - $HOME/.gradle/caches/
-    - $HOME/.gradle/wrapper/
+  - $HOME/.gradle/caches/
+  - $HOME/.gradle/wrapper/
 script:
-  - ./gradlew clean
-  - ./gradlew build
-  - ./gradlew jacocoTestReport
-  - ./gradlew jacocoTestCoverageVerification
+- ./gradlew build
+- ./gradlew jacocoTestReport
+- ./gradlew jacocoTestCoverageVerification
 after_success:
-  - ./gradlew shadowJar
-  - bash <(curl -s https://codecov.io/bash)
+- bash <(curl -s https://codecov.io/bash)
+deploy:
+- provider: script
+  script: ./gradlew bintrayUpload
+  skip_cleanup: true
+  on:
+    repo: hmcts/azure-keyvault-jca-provider
+    tags: true
+env:
+  global:
+  - secure: d40a4EastRP1faYW6bVNv9zCfEs+WsJKxoxxN77F1hU8f/90O77HUNNFCbLK+FdXsLVF3/fuUKgr8v2hzcr0i+gRfYWK4dRx+Zr6vbKIqDjAgJgd/TU0sCNAyrbwgTsPlwsBXsUJpDqHl4Fc6XxYlbz3/1n3CMm0Op29w+Q+uHddE33LWKF5I27K6jPhhZWmqJbdLe9LrtPXAY/yTIh4t6Q9Su7dRHzu4AAnpgjjHYt9aRasdGSMWfGKUoh3Oal1rXCqB+pW/W6SvFGds0OmRkoLaYz3XJ2uOSklva8k8eox1vh89N1AI3E2ycF8178vq/Am378S50NgmdMNLy9APDlp+2WcwPix9CQLwdKKKZyUtTQ0WEpJEAUVTyjR/pTchRGZHgROTqd0+6bN2B/tC49aElxxajCyfpzxBMgohhT2XzX+qnNRexph5NiCLYkjNXjOw1YrY5AnoSMxWJMW3wclLzpyrdmAj90IAIfqXyFpwrS+4fM44y97tlMplrSC1l6cdKqpazpScP4Oy5t8YrVhES7WxIWRsNOZ9qp2Srprb6zE8We+7GZm3pPmjVPaAs9XJ4mZrOgr4TtbpYRFreN9p6j37hND5S4z+60IWogMQ/9JqRVM6BKh9aZ3rkaFYyDE+7TdJnbNRuUHuimCr/ZYjeLtV+v7AfKYKqPuWJ4=
+  - secure: ljLMlhoLanFPpBgtuauBt0CTVjxrhKIwlK8j8xRqNgQ64mmqpOyWxmanp6lT1RF1fbnaHXbmmAKCCBvAjvTz9WKV9bxqfmGamZWd0VJfFhdyCZj8zxgEWAYMOumMeSiZJDP6/r7f7fkWg5s/BWVf9sXgRv42pUeHNsUkHw7vXqCyvVcqbHGjlnLU625+2zS4XJ3MaC76PBeUcPCIujusS4wJWc+noWAFX/uKvfy7yM0Tp53eS2nY5JTWAtr2B9OUUL2dWFW7KaTtNzRZ9ckbaa03iqVc70C7Dt2ORkU2hioCO6mfdZrRO9C88LapEVsrdxlaRWZjWLyG8XNVwBbv8BZ4FNO9f9w8lLlcQCOGCTmFpQQ+tfl/v97fe4lYu9KGl6XdTHigh4h3qtEL8CSnC5tQ6KxC+d2lDuccVUGN6V8iYHlKLOQL3bcfVllwHo3L3tySw8v5zYaZyyXOD1Zk8Sc6jAIy940MwEB83Vze508jF0Lbq0Smy4RZo71NmXYo6VBDzx7Xbe5dCgRKZDBJF8lF7eLC2CW7Q1fm3y0slblvs8xfEw5ELrDpXejfO6DF90uPmbKbeNHe5UhpHgJWQCHjtTZrM7S5BXaQAdks8XguAoHYvLSpQIJB65bEyoO4dbAPBdQ74y/ZzzXNwWZHwWxxs0osKtLbG6OBtWUlD8k=
