@@ -23,7 +23,7 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
     private final KeyVaultService vaultService;
 
     KeyVaultRSASignature(String algorithm) {
-        this(algorithm, new KeyVaultService());
+        this(algorithm, KeyVaultService.getInstance());
     }
 
     KeyVaultRSASignature(String algorithm, KeyVaultService vaultService) {

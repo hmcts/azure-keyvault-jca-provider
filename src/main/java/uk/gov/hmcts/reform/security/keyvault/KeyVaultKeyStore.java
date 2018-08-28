@@ -175,6 +175,6 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
 
     @Override
     public void engineLoad(InputStream stream, char[] password) {
-        vaultService = new KeyVaultService();
+        vaultService = KeyVaultService.getInstance();
     }
 }

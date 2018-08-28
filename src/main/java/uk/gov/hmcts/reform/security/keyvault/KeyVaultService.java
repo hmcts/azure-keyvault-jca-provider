@@ -40,6 +40,12 @@ final class KeyVaultService {
 
     private final LoadingCache<String, CertificateBundle> certificateByAliasCache;
 
+    private static final KeyVaultService INSTANCE = new KeyVaultService();
+
+    public static KeyVaultService getInstance() {
+        return INSTANCE;
+    }
+
     // Used by tests to inject the vault client
     KeyVaultService(KeyVaultClient vaultClient, LoadingCache<String, KeyBundle> keyByAliasCache, LoadingCache<String,
         KeyBundle> keyByIdentifierCache, LoadingCache<String, CertificateBundle> certificateByAliasCache) {
@@ -50,7 +56,7 @@ final class KeyVaultService {
         this.certificateByAliasCache = certificateByAliasCache;
     }
 
-    KeyVaultService() {
+    private KeyVaultService() {
         baseUrl = System.getProperty(BASE_URL_PROPERTY);
 
         String clientId = System.getProperty(CLIENT_ID_PROPERTY);
