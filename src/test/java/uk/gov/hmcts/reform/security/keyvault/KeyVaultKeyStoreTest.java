@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -201,9 +202,23 @@ public class KeyVaultKeyStoreTest {
      * @verifies throw exception
      * @see KeyVaultKeyStore#engineContainsAlias(String)
      */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineContainsAlias_shouldThrowException() {
-        keyStore.engineContainsAlias(ALIAS);
+    @Test
+    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsTheCertificate() throws Exception {
+        CertificateBundle certBundle = mock(CertificateBundle.class);
+        given(vaultService.getCertificateByAlias(eq(ALIAS))).willReturn(certBundle);
+
+        assertTrue(keyStore.engineContainsAlias(ALIAS));
+    }
+
+    /**
+     * @verifies return false when vault does not contain the alias
+     * @see KeyVaultKeyStore#engineContainsAlias(String)
+     */
+    @Test
+    public void engineContainsAlias_shouldReturnFalseWhenVaultDoesNotContainTheAlias() throws Exception {
+        given(vaultService.getCertificateByAlias(eq(ALIAS))).willReturn(null);
+
+        assertFalse(keyStore.engineContainsAlias(ALIAS));
     }
 
     /**
