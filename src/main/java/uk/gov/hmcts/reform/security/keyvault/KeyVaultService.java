@@ -30,6 +30,8 @@ final class KeyVaultService {
 
     static final String CLIENT_SECRET_PROPERTY = "azure_client_secret";
 
+    private static final KeyVaultService INSTANCE = new KeyVaultService();
+
     private final String baseUrl;
 
     private final KeyVaultClient vaultClient;
@@ -39,6 +41,10 @@ final class KeyVaultService {
     private final LoadingCache<String, KeyBundle> keyByIdentifierCache;
 
     private final LoadingCache<String, CertificateBundle> certificateByAliasCache;
+
+    public static KeyVaultService getInstance() {
+        return INSTANCE;
+    }
 
     // Used by tests to inject the vault client
     KeyVaultService(KeyVaultClient vaultClient, LoadingCache<String, KeyBundle> keyByAliasCache, LoadingCache<String,
@@ -50,7 +56,7 @@ final class KeyVaultService {
         this.certificateByAliasCache = certificateByAliasCache;
     }
 
-    KeyVaultService() {
+    private KeyVaultService() {
         baseUrl = System.getProperty(BASE_URL_PROPERTY);
 
         String clientId = System.getProperty(CLIENT_ID_PROPERTY);
