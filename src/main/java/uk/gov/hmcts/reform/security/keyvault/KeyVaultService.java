@@ -30,6 +30,8 @@ final class KeyVaultService {
 
     static final String CLIENT_SECRET_PROPERTY = "azure_client_secret";
 
+    private static final KeyVaultService INSTANCE = new KeyVaultService();
+
     private final String baseUrl;
 
     private final KeyVaultClient vaultClient;
@@ -39,8 +41,6 @@ final class KeyVaultService {
     private final LoadingCache<String, KeyBundle> keyByIdentifierCache;
 
     private final LoadingCache<String, CertificateBundle> certificateByAliasCache;
-
-    private static final KeyVaultService INSTANCE = new KeyVaultService();
 
     public static KeyVaultService getInstance() {
         return INSTANCE;
