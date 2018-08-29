@@ -9,7 +9,7 @@ plugins {
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
-version = '0.0.1'
+version = '1.0.0'
 
 dependencies {
   implementation 'com.google.guava:guava:24.1-jre'
