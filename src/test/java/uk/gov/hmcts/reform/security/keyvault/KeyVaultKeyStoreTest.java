@@ -199,13 +199,27 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies throw exception
+     * @verifies return true when vault contains a certificate with the required alias
      * @see KeyVaultKeyStore#engineContainsAlias(String)
      */
     @Test
-    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsTheCertificate() throws Exception {
+    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsACertificateWithTheRequiredAlias()
+        throws Exception {
         CertificateBundle certBundle = mock(CertificateBundle.class);
         given(vaultService.getCertificateByAlias(eq(ALIAS))).willReturn(certBundle);
+
+        assertTrue(keyStore.engineContainsAlias(ALIAS));
+    }
+
+    /**
+     * @verifies return true when vault contains a key with the required alias
+     * @see KeyVaultKeyStore#engineContainsAlias(String)
+     */
+    @Test
+    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsAKeyWithTheRequiredAlias()
+        throws Exception {
+        KeyBundle keyBundle = mock(KeyBundle.class);
+        given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(keyBundle);
 
         assertTrue(keyStore.engineContainsAlias(ALIAS));
     }
@@ -217,6 +231,7 @@ public class KeyVaultKeyStoreTest {
     @Test
     public void engineContainsAlias_shouldReturnFalseWhenVaultDoesNotContainTheAlias() throws Exception {
         given(vaultService.getCertificateByAlias(eq(ALIAS))).willReturn(null);
+        given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(null);
 
         assertFalse(keyStore.engineContainsAlias(ALIAS));
     }
