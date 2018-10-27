@@ -203,7 +203,8 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineContainsAlias(String)
      */
     @Test
-    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsACertificateWithTheRequiredAlias() throws Exception {
+    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsACertificateWithTheRequiredAlias()
+        throws Exception {
         CertificateBundle certBundle = mock(CertificateBundle.class);
         given(vaultService.getCertificateByAlias(eq(ALIAS))).willReturn(certBundle);
 
@@ -215,7 +216,8 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineContainsAlias(String)
      */
     @Test
-    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsAKeyWithTheRequiredAlias() throws Exception {
+    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsAKeyWithTheRequiredAlias()
+        throws Exception {
         KeyBundle keyBundle = mock(KeyBundle.class);
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(keyBundle);
 
