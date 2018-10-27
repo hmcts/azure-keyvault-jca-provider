@@ -126,7 +126,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should return true when vault contains the certificate
+     * @should return true when vault contains  certificate with the required alias
+     * @should return true when vault contains a key with the required alias
      * @should return false when vault does not contain the alias
      */
     @Override
