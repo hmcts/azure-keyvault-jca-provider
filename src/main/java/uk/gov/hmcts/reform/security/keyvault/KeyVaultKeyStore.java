@@ -131,7 +131,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public boolean engineContainsAlias(String alias) {
-        return vaultService.getCertificateByAlias(alias) != null;
+        try {
+            return vaultService.getKeyByAlias(alias) != null || vaultService.getCertificateByAlias(alias) != null;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
