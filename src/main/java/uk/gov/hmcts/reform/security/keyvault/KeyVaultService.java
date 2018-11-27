@@ -3,32 +3,19 @@ package uk.gov.hmcts.reform.security.keyvault;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.microsoft.aad.adal4j.AuthenticationContext;
-import com.microsoft.aad.adal4j.AuthenticationResult;
-import com.microsoft.aad.adal4j.ClientCredential;
+import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.keyvault.KeyVaultClient;
-import com.microsoft.azure.keyvault.authentication.KeyVaultCredentials;
 import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.KeyOperationResult;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
+import uk.gov.hmcts.reform.security.msi.CustomAppServiceMSICredentials;
 
-import java.net.MalformedURLException;
-import java.security.ProviderException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 final class KeyVaultService {
 
     static final String BASE_URL_PROPERTY = "azure_key_vault_base_url";
-
-    static final String CLIENT_ID_PROPERTY = "azure_client_id";
-
-    static final String CLIENT_SECRET_PROPERTY = "azure_client_secret";
 
     private static final KeyVaultService INSTANCE = new KeyVaultService();
 
@@ -59,33 +46,9 @@ final class KeyVaultService {
     private KeyVaultService() {
         baseUrl = System.getProperty(BASE_URL_PROPERTY);
 
-        String clientId = System.getProperty(CLIENT_ID_PROPERTY);
-        String clientSecret = System.getProperty(CLIENT_SECRET_PROPERTY);
+        CustomAppServiceMSICredentials credentials = new CustomAppServiceMSICredentials(AzureEnvironment.AZURE);
 
-        KeyVaultCredentials keyVaultCredentials = new KeyVaultCredentials() {
-            @Override
-            public String doAuthenticate(String authorization, String resource, String scope) {
-                ExecutorService service = null;
-                try {
-                    service = Executors.newFixedThreadPool(1);
-                    AuthenticationContext context = new AuthenticationContext(authorization, false, service);
-
-                    ClientCredential credential = new ClientCredential(clientId, clientSecret);
-                    Future<AuthenticationResult> future = context.acquireToken(resource, credential, null);
-                    AuthenticationResult authenticationResult = future.get(30, TimeUnit.SECONDS);
-
-                    return authenticationResult.getAccessToken();
-                } catch (MalformedURLException | InterruptedException | ExecutionException | TimeoutException e) {
-                    throw new ProviderException(e);
-                } finally {
-                    if (service != null) {
-                        service.shutdown();
-                    }
-                }
-            }
-        };
-
-        vaultClient = new KeyVaultClient(keyVaultCredentials);
+        vaultClient = new KeyVaultClient(credentials);
         keyByAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
             .build(new KeyByAliasCacheLoader(baseUrl, vaultClient));
