@@ -6,15 +6,20 @@ plugins {
   id 'checkstyle'
   id 'org.owasp.dependencycheck' version '3.1.2'
   id 'com.jfrog.bintray' version '1.8.0'
+  id 'idea'
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
-version = '1.0.2'
+version = '2.0.0'
 
 dependencies {
   implementation 'com.google.guava:guava:24.1-jre'
-  implementation 'com.microsoft.azure:azure-keyvault:1.0.0'
-  implementation 'com.microsoft.azure:adal4j:1.5.0'
+  implementation 'com.google.http-client:google-http-client:1.27.0'
+
+  implementation 'com.microsoft.azure:adal4j:1.6.3'
+  implementation 'com.microsoft.azure:azure-keyvault:1.1.2'
+  implementation 'com.microsoft.azure:azure-client-runtime:1.6.3'
+  implementation 'com.microsoft.azure:azure-client-authentication:1.6.3'
 
   // Azure-KeyVault dependency uses an older version of databind which
   // has been flagged by the dependency-checker plugin
@@ -95,4 +100,11 @@ repositories {
 task sourcesJar(type: Jar, dependsOn: classes) {
   classifier = 'sources'
   from sourceSets.main.allSource
+}
+
+idea {
+  module {
+    downloadJavadoc = true
+    downloadSources = true
+  }
 }

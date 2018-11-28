@@ -1,23 +1,23 @@
 package uk.gov.hmcts.reform.security.msi;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpBackOffUnsuccessfulResponseHandler;
+import com.google.api.client.http.HttpHeaders;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestFactory;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.util.ExponentialBackOff;
 import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.credentials.AzureTokenCredentials;
-import com.microsoft.azure.serializer.AzureJacksonAdapter;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 
 public class CustomAppServiceMSICredentials extends AzureTokenCredentials {
 
     private static final String MSI_TOKEN_URL = "http://169.254.169.254/metadata/identity/oauth2/token";
     private static final String MSI_QUERY_STRING = "?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net";
-    private static final String MSI_KEYVAULT_TOKEN_URL = MSI_TOKEN_URL + MSI_QUERY_STRING;
-    private static final String HTTP_METHOD_GET = "GET";
+    private static final String MSI_KEYVAULT_TOKEN_URL = MSI_TOKEN_URL.concat(MSI_QUERY_STRING);
     private static final String REQUEST_HEADER_METADATA = "Metadata";
     private static final String REQUEST_HEADER_METADATA_VALUE_TRUE = "true";
 
@@ -29,32 +29,34 @@ public class CustomAppServiceMSICredentials extends AzureTokenCredentials {
     @Override
     public String getToken(String resource) throws IOException {
 
-        URL url = new URL(MSI_KEYVAULT_TOKEN_URL);
-        HttpURLConnection connection = null;
+        HttpRequest tokenRequest = buildTokenHttpRequest();
+        String rawResponse = tokenRequest.execute().parseAsString();
+        AccessTokenRespHolder accessTokenRespHolder = new ObjectMapper()
+                                                            .readValue(rawResponse, AccessTokenRespHolder.class);
 
-        try {
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod(HTTP_METHOD_GET);
-            connection.setRequestProperty(REQUEST_HEADER_METADATA, REQUEST_HEADER_METADATA_VALUE_TRUE);
-            connection.connect();
+        return accessTokenRespHolder.getAccessToken();
+    }
 
-            InputStream stream = connection.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8), 100);
-            String result = reader.readLine();
+    private HttpRequest buildTokenHttpRequest() throws IOException {
+        HttpRequestFactory httpRequestFactory = new NetHttpTransport().createRequestFactory();
+        GenericUrl genericUrl = new GenericUrl(MSI_KEYVAULT_TOKEN_URL);
 
-            AzureJacksonAdapter adapter = new AzureJacksonAdapter();
-            AccessTokenRespHolder tokenRespHolder = adapter.deserialize(result, AccessTokenRespHolder.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(REQUEST_HEADER_METADATA, REQUEST_HEADER_METADATA_VALUE_TRUE);
+        HttpRequest tokenRequest  = httpRequestFactory.buildGetRequest(genericUrl).setHeaders(headers);
+        tokenRequest.setUnsuccessfulResponseHandler(
+            new HttpBackOffUnsuccessfulResponseHandler(getExponentialBackOff()));
 
-            return tokenRespHolder.getAccessToken();
+        return tokenRequest;
+    }
 
-        } catch (Exception e) {
-            throw e;
-
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
-
+    private ExponentialBackOff getExponentialBackOff() {
+        return new ExponentialBackOff.Builder()
+                .setInitialIntervalMillis(500)
+                .setMaxElapsedTimeMillis(90000)
+                .setMaxIntervalMillis(6000)
+                .setMultiplier(1.5)
+                .setRandomizationFactor(0.5)
+                .build();
     }
 }
