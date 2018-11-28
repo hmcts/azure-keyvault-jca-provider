@@ -6,6 +6,12 @@
         <gav regex="true">^com\.microsoft\.azure:adal4j:.*$</gav>
         <cve>CVE-2013-1282</cve>
     </suppress>
+    <suppress>
+        <notes><![CDATA[ file name: adal4j-1.5.0.jar]]></notes>
+        <gav regex="true">^com\.microsoft\.azure:adal4j:.*$</gav>
+        <cve>CVE-2018-16794</cve>
+    </suppress>
+
     <!-- This CVE is Java serialization in Guava -->
     <suppress>
         <notes><![CDATA[

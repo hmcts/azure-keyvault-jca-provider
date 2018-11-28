@@ -45,7 +45,6 @@ final class KeyVaultService {
 
     private KeyVaultService() {
         baseUrl = System.getProperty(BASE_URL_PROPERTY);
-
         CustomAppServiceMSICredentials credentials = new CustomAppServiceMSICredentials(AzureEnvironment.AZURE);
 
         vaultClient = new KeyVaultClient(credentials);
