@@ -45,7 +45,7 @@ public class CustomAppServiceMSICredentials extends AzureTokenCredentials {
         headers.set(REQUEST_HEADER_METADATA, REQUEST_HEADER_METADATA_VALUE_TRUE);
         HttpRequest tokenRequest  = httpRequestFactory.buildGetRequest(genericUrl).setHeaders(headers);
         tokenRequest.setUnsuccessfulResponseHandler(
-            new HttpBackOffUnsuccessfulResponseHandler(getExponentialBackOff()));
+            new HttpBackOffUnsuccessfulResponseHandler(getExponentialBackOff())).setNumberOfRetries(3);
 
         return tokenRequest;
     }
