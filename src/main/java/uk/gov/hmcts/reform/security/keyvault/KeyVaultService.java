@@ -3,33 +3,19 @@ package uk.gov.hmcts.reform.security.keyvault;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.microsoft.aad.adal4j.AuthenticationContext;
-import com.microsoft.aad.adal4j.AuthenticationResult;
-import com.microsoft.aad.adal4j.ClientCredential;
 import com.microsoft.azure.keyvault.KeyVaultClient;
-import com.microsoft.azure.keyvault.authentication.KeyVaultCredentials;
 import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.KeyOperationResult;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
+import org.apache.commons.lang3.StringUtils;
+import uk.gov.hmcts.reform.security.keyvault.credential.AccessTokenKeyVaultCredential;
+import uk.gov.hmcts.reform.security.keyvault.credential.ClientSecretKeyVaultCredential;
 
-import java.net.MalformedURLException;
-import java.security.ProviderException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+
 
 final class KeyVaultService {
-
-    static final String BASE_URL_PROPERTY = "azure_key_vault_base_url";
-
-    static final String CLIENT_ID_PROPERTY = "azure_client_id";
-
-    static final String CLIENT_SECRET_PROPERTY = "azure_client_secret";
-
     private static final KeyVaultService INSTANCE = new KeyVaultService();
 
     private final String baseUrl;
@@ -49,7 +35,7 @@ final class KeyVaultService {
     // Used by tests to inject the vault client
     KeyVaultService(KeyVaultClient vaultClient, LoadingCache<String, KeyBundle> keyByAliasCache, LoadingCache<String,
         KeyBundle> keyByIdentifierCache, LoadingCache<String, CertificateBundle> certificateByAliasCache) {
-        baseUrl = System.getProperty(BASE_URL_PROPERTY);
+        baseUrl = System.getProperty(KeyVaultConfig.VAULT_BASE_URL);
         this.vaultClient = vaultClient;
         this.keyByAliasCache = keyByAliasCache;
         this.keyByIdentifierCache = keyByIdentifierCache;
@@ -57,35 +43,12 @@ final class KeyVaultService {
     }
 
     private KeyVaultService() {
-        baseUrl = System.getProperty(BASE_URL_PROPERTY);
+        baseUrl = System.getProperty(KeyVaultConfig.VAULT_BASE_URL);
 
-        String clientId = System.getProperty(CLIENT_ID_PROPERTY);
-        String clientSecret = System.getProperty(CLIENT_SECRET_PROPERTY);
+        vaultClient = getClient(new KeyVaultConfig());
 
-        KeyVaultCredentials keyVaultCredentials = new KeyVaultCredentials() {
-            @Override
-            public String doAuthenticate(String authorization, String resource, String scope) {
-                ExecutorService service = null;
-                try {
-                    service = Executors.newFixedThreadPool(1);
-                    AuthenticationContext context = new AuthenticationContext(authorization, false, service);
+        // TODO Handle null vaultClient;
 
-                    ClientCredential credential = new ClientCredential(clientId, clientSecret);
-                    Future<AuthenticationResult> future = context.acquireToken(resource, credential, null);
-                    AuthenticationResult authenticationResult = future.get(30, TimeUnit.SECONDS);
-
-                    return authenticationResult.getAccessToken();
-                } catch (MalformedURLException | InterruptedException | ExecutionException | TimeoutException e) {
-                    throw new ProviderException(e);
-                } finally {
-                    if (service != null) {
-                        service.shutdown();
-                    }
-                }
-            }
-        };
-
-        vaultClient = new KeyVaultClient(keyVaultCredentials);
         keyByAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
             .build(new KeyByAliasCacheLoader(baseUrl, vaultClient));
@@ -95,6 +58,17 @@ final class KeyVaultService {
         certificateByAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
             .build(new CertificateByAliasCacheLoader(baseUrl, vaultClient));
+    }
+
+    public KeyVaultClient getClient(KeyVaultConfig keyVaultConfig) {
+        if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
+            return new KeyVaultClient(new ClientSecretKeyVaultCredential(keyVaultConfig.getVaultClientId(),
+                    keyVaultConfig.getVaultClientKey()));
+        } else if (StringUtils.isNotEmpty(keyVaultConfig.getVaultMsiUrl())) {
+            return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig.getVaultMsiUrl(),
+                keyVaultConfig.getVaultErrorMaxRetries(), keyVaultConfig.getVaultErrorRetryIntervalMillis()));
+        }
+        return null;
     }
 
     /**
