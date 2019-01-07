@@ -5,5 +5,24 @@
         <notes><![CDATA[ file name: adal4j-1.5.0.jar]]></notes>
         <gav regex="true">^com\.microsoft\.azure:adal4j:.*$</gav>
         <cve>CVE-2013-1282</cve>
+        <cve>CVE-2018-16794</cve>
+    </suppress>
+
+    <!-- This CVE is Java serialization in Guava -->
+    <suppress>
+        <notes><![CDATA[
+   This suppresses false positives identified on Guava
+   ]]></notes>
+        <gav regex="true">^com\.google\.guava\:guava\:\d\d.\d-jre$</gav>
+        <cve>CVE-2018-10237</cve>
+    </suppress>
+
+    <!-- This CVE is about EventData in Slf4j -->
+    <suppress>
+        <notes><![CDATA[
+   This suppresses false positives identified on Slf4j
+   ]]></notes>
+        <gav regex="true">^^.*slf4j.*$$</gav>
+        <cve>CVE-2018-8088</cve>
     </suppress>
 </suppressions>
