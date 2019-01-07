@@ -28,7 +28,7 @@ public class KeyVaultServiceTest {
 
     @BeforeClass
     public static void beforeClass() {
-        System.setProperty(KeyVaultService.BASE_URL_PROPERTY, BASE_URL);
+        System.setProperty(KeyVaultConfig.VAULT_BASE_URL, BASE_URL);
     }
 
     @Mock
