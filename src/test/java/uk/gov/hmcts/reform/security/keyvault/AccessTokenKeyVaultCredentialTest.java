@@ -11,9 +11,12 @@ import com.google.common.collect.ImmutableMap;
 import com.microsoft.azure.keyvault.KeyVaultClient;
 import com.microsoft.azure.keyvault.models.SecretBundle;
 import com.microsoft.rest.credentials.ServiceClientCredentials;
+import org.apache.http.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -41,6 +44,9 @@ public class AccessTokenKeyVaultCredentialTest {
     private static final String VAULT_MSI_URL = "http://localhost:" + DUMMY_VAULT_SERVER_PORT
         + "/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net";
 
+    private static final String VAULT_MSI_INVALID_RESPONSE_URL = "http://localhost:" + DUMMY_VAULT_SERVER_PORT
+            + "/metadata/identity/error/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net";
+
     @Mock
     private KeyVaultService keyVaultService;
 
@@ -64,6 +70,10 @@ public class AccessTokenKeyVaultCredentialTest {
         + "\"token_type\": \"Bearer\"\n"
         + "}";
 
+    private static final String INVALID_TOKEN_RESPONSE = "{"
+        + "\"not_access_token\": \"eyJ0eXAiOiJKV1...hQ5J4_hoQ\"\n"
+        + "}";
+
     private static final String SECRET_RESPONSE_TEMPLATE = "{\"value\":\"%s\",\n"
         + "\"id\":\"https://test.vault.azure.net/secrets/%s/5f5b24471cca47f99cdd3204d41372d2\",\n"
         + "\"attributes\":"
@@ -82,20 +92,35 @@ public class AccessTokenKeyVaultCredentialTest {
         configureFor("localhost", DUMMY_VAULT_SERVER_PORT);
         stubFor(get(urlPathMatching("/metadata/identity/oauth2/.*"))
             .willReturn(aResponse()
-                .withStatus(200)
+                .withStatus(HttpStatus.SC_OK)
                 .withHeader("Content-Type", "application/json")
                 .withBody(TOKEN_RESPONSE)));
+
+        stubFor(get(urlPathMatching("/metadata/identity/error/oauth2/.*"))
+            .willReturn(aResponse()
+                .withStatus(HttpStatus.SC_OK)
+                .withHeader("Content-Type", "application/json")
+                .withBody(INVALID_TOKEN_RESPONSE)));
 
         stubFor(get(urlPathMatching("/test/.*"))
             .willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withTransformers("secret-response-transformer")));
+
+        stubFor(get(urlPathMatching("/error/.*"))
+            .willReturn(aResponse()
+                .withStatus(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                .withHeader("Content-Type", "application/json")
+                .withBody("")));
     }
 
     @After
     public void shutdown() {
         wireMockServer.stop();
     }
+
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     /**
      * @verifies select correct client based on system properties
@@ -128,6 +153,57 @@ public class AccessTokenKeyVaultCredentialTest {
         assertEquals("ABCDE", bindPasswordValue);
     }
 
+    /**
+     * @verifies select correct client based on system properties
+     * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
+     */
+    @Test
+    public void getClient_shouldCreateAccessTokenClientAndHandleDummyServerResponsesWithNoAccessToken() {
+        thrown.expectMessage("No access_token parameter present in response");
+
+        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "");
+        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "");
+        System.setProperty(KeyVaultConfig.VAULT_MSI_URL, VAULT_MSI_INVALID_RESPONSE_URL);
+        System.setProperty(KeyVaultConfig.VAULT_ERROR_MAX_RETRIES, "2");
+        System.setProperty(KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
+
+        KeyVaultConfig config = new KeyVaultConfig();
+        when(keyVaultService.getClient(config)).thenCallRealMethod();
+
+        KeyVaultClient client = keyVaultService.getClient(config);
+        ServiceClientCredentials credentials = client.restClient().credentials();
+
+        assertTrue(credentials instanceof AccessTokenKeyVaultCredential);
+
+        client.getSecret(BASE_URL, "test-owner-username");
+    }
+
+    /**
+     * @verifies select correct client based on system properties
+     * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
+     */
+    @Test
+    public void getClient_shouldCreateAccessTokenClientAndHandleDummyServerResponsesWithServerError() {
+        thrown.expectMessage("Server Error");
+
+        System.setProperty(KeyVaultConfig.VAULT_BASE_URL, BASE_URL);
+        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "");
+        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "");
+        System.setProperty(KeyVaultConfig.VAULT_MSI_URL, "http://localhost:" + DUMMY_VAULT_SERVER_PORT + "/error/42");
+        System.setProperty(KeyVaultConfig.VAULT_ERROR_MAX_RETRIES, "2");
+        System.setProperty(KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
+
+        KeyVaultConfig config = new KeyVaultConfig();
+        when(keyVaultService.getClient(config)).thenCallRealMethod();
+
+        KeyVaultClient client = keyVaultService.getClient(config);
+        ServiceClientCredentials credentials = client.restClient().credentials();
+
+        assertTrue(credentials instanceof AccessTokenKeyVaultCredential);
+
+        client.getSecret("http://localhost:" + DUMMY_VAULT_SERVER_PORT + "/error/42", "test-owner-username");
+    }
+
     public static class ExampleTransformer extends ResponseDefinitionTransformer {
 
         @Override
@@ -136,7 +212,7 @@ public class AccessTokenKeyVaultCredentialTest {
 
             return new ResponseDefinitionBuilder()
                 .withHeader("Content-Type", "application/json")
-                .withStatus(200)
+                .withStatus(HttpStatus.SC_OK)
                 .withBody(generateResponse(request.getUrl()))
                 .build();
         }
