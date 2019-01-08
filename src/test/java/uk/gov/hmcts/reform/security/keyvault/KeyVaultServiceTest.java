@@ -6,7 +6,6 @@ import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -26,11 +25,6 @@ public class KeyVaultServiceTest {
 
     private static final String KEY_IDENTIFIER = "KEY_ID";
 
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty(KeyVaultConfig.VAULT_BASE_URL, BASE_URL);
-    }
-
     @Mock
     private KeyVaultClient vaultClient;
 
@@ -38,6 +32,8 @@ public class KeyVaultServiceTest {
 
     @Before
     public void setUp() {
+        System.setProperty(KeyVaultConfig.VAULT_BASE_URL, BASE_URL);
+
         keyVaultService = new KeyVaultService(vaultClient,
             CacheBuilder.newBuilder().build(new KeyVaultService.KeyByAliasCacheLoader(BASE_URL, vaultClient)),
             CacheBuilder.newBuilder().build(new KeyVaultService.KeyByIdentifierCacheLoader(vaultClient)),
