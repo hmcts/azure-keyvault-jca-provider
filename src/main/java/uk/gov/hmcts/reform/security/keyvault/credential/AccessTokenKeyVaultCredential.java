@@ -21,7 +21,9 @@ public class AccessTokenKeyVaultCredential extends AzureTokenCredentials {
 
     private final String tokenEndpoint;
 
-    private static final HttpClient HTTP_CLIENT = HttpClientBuilder.create().setServiceUnavailableRetryStrategy(
+    private static final TokenResponseHandler tokenResponseHandler = new TokenResponseHandler();
+
+    private static final HttpClient httpClient = HttpClientBuilder.create().setServiceUnavailableRetryStrategy(
         new ServiceUnavailableRetryStrategy() {
             @Override
             public boolean retryRequest(final HttpResponse response,
@@ -50,6 +52,6 @@ public class AccessTokenKeyVaultCredential extends AzureTokenCredentials {
                 .setHeader(METADATA_HEADER, Boolean.TRUE.toString())
                 .build();
 
-        return HTTP_CLIENT.execute(request, TokenResponseHandler.getInstance());
+        return httpClient.execute(request, tokenResponseHandler);
     }
 }

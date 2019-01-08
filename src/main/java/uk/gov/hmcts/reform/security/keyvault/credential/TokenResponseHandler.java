@@ -21,21 +21,6 @@ public class TokenResponseHandler implements ResponseHandler<String> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private TokenResponseHandler() {
-    }
-
-    public static TokenResponseHandler getInstance() {
-        if (instance == null) {
-            synchronized (TokenResponseHandler.class) {
-                if (instance == null) {
-                    instance = new TokenResponseHandler();
-                }
-            }
-        }
-
-        return instance;
-    }
-
     @Override
     public String handleResponse(HttpResponse response) throws IOException {
         StatusLine statusLine = response.getStatusLine();
