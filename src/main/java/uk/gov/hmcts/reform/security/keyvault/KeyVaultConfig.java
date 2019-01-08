@@ -9,16 +9,16 @@ import lombok.Setter;
 @EqualsAndHashCode
 public class KeyVaultConfig {
 
-    protected static final String VAULT_BASE_URL = "azure_key_vault_base_url";
-    protected static final String VAULT_CLIENT_ID = "azure_client_id";
-    protected static final String VAULT_CLIENT_KEY = "azure_client_secret";
+    public static final String VAULT_BASE_URL = "azure_key_vault_base_url";
+    public static final String VAULT_CLIENT_ID = "azure_client_id";
+    public static final String VAULT_CLIENT_KEY = "azure_client_secret";
 
-    protected static final String VAULT_MSI_URL = "azure_key_vault_msi_url";
-    protected static final String VAULT_ERROR_MAX_RETRIES = "azure_key_vault_msi_error_retry_max_number";
-    protected static final String VAULT_ERROR_RETRY_INTERVAL_MILLIS = "azure_key_vault_msi_error_retry_interval_millis";
+    public static final String VAULT_MSI_URL = "azure_key_vault_msi_url";
+    public static final String VAULT_ERROR_MAX_RETRIES = "azure_key_vault_msi_error_retry_max_number";
+    public static final String VAULT_ERROR_RETRY_INTERVAL_MILLIS = "azure_key_vault_msi_error_retry_interval_millis";
 
-    protected static final String DEFAULT_VAULT_ERROR_MAX_RETRIES = "3";
-    protected static final String DEFAULT_VAULT_ERROR_RETRY_INTERVAL_MILLIS = "0";
+    public static final String DEFAULT_VAULT_ERROR_MAX_RETRIES = "3";
+    public static final String DEFAULT_VAULT_ERROR_RETRY_INTERVAL_MILLIS = "0";
 
     private String vaultBaseUrl;
 
