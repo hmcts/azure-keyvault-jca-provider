@@ -43,9 +43,10 @@ final class KeyVaultService {
     }
 
     private KeyVaultService() {
-        baseUrl = System.getProperty(KeyVaultConfig.VAULT_BASE_URL);
+        KeyVaultConfig keyVaultConfig = new KeyVaultConfig();
+        baseUrl = keyVaultConfig.getVaultBaseUrl();
 
-        vaultClient = getClient(new KeyVaultConfig());
+        vaultClient = getClient(keyVaultConfig);
 
         // TODO Handle null vaultClient;
 
