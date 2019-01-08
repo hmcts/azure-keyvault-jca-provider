@@ -103,6 +103,8 @@ public class AccessTokenKeyVaultCredentialTest {
      */
     @Test
     public void getClient_shouldCreateAccessTokenClientAndHandleDummyServerResponses() {
+        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "");
+        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "");
         System.setProperty(KeyVaultConfig.VAULT_MSI_URL, VAULT_MSI_URL);
         System.setProperty(KeyVaultConfig.VAULT_ERROR_MAX_RETRIES, "2");
         System.setProperty(KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
