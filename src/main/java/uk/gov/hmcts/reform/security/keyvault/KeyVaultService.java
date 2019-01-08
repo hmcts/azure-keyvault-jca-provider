@@ -60,6 +60,9 @@ final class KeyVaultService {
             .build(new CertificateByAliasCacheLoader(baseUrl, vaultClient));
     }
 
+    /**
+     * @should select correct client based on system properties
+     */
     public KeyVaultClient getClient(KeyVaultConfig keyVaultConfig) {
         if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
             return new KeyVaultClient(new ClientSecretKeyVaultCredential(keyVaultConfig.getVaultClientId(),
