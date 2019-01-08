@@ -53,7 +53,7 @@ public class KeyVaultServiceClientTest {
      * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
      */
     @Test
-    public void getClient_shouldCreateClientSecret() {
+    public void getClient_shouldCreateClientSecretClient() {
         System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "CLIENT_ID");
         System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "CLIENT_KEY");
 
