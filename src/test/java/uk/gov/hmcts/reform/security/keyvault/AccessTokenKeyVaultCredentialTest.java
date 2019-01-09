@@ -18,7 +18,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import uk.gov.hmcts.reform.security.keyvault.credential.AccessTokenKeyVaultCredential;
 
@@ -32,7 +31,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class AccessTokenKeyVaultCredentialTest {
@@ -46,9 +44,6 @@ public class AccessTokenKeyVaultCredentialTest {
 
     private static final String VAULT_MSI_INVALID_RESPONSE_URL = "http://localhost:" + DUMMY_VAULT_SERVER_PORT
             + "/metadata/identity/error/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net";
-
-    @Mock
-    private KeyVaultService keyVaultService;
 
     private static WireMockServer wireMockServer;
 
@@ -137,9 +132,7 @@ public class AccessTokenKeyVaultCredentialTest {
         KeyVaultConfig config = new KeyVaultConfig();
         assertEquals(VAULT_MSI_URL, config.getVaultMsiUrl());
 
-        when(keyVaultService.getClient(config)).thenCallRealMethod();
-
-        KeyVaultClient client = keyVaultService.getClient(config);
+        KeyVaultClient client = KeyVaultService.getClient(config);
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof AccessTokenKeyVaultCredential);
@@ -168,9 +161,8 @@ public class AccessTokenKeyVaultCredentialTest {
         System.setProperty(KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
 
         KeyVaultConfig config = new KeyVaultConfig();
-        when(keyVaultService.getClient(config)).thenCallRealMethod();
 
-        KeyVaultClient client = keyVaultService.getClient(config);
+        KeyVaultClient client = KeyVaultService.getClient(config);
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof AccessTokenKeyVaultCredential);
@@ -194,9 +186,8 @@ public class AccessTokenKeyVaultCredentialTest {
         System.setProperty(KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
 
         KeyVaultConfig config = new KeyVaultConfig();
-        when(keyVaultService.getClient(config)).thenCallRealMethod();
 
-        KeyVaultClient client = keyVaultService.getClient(config);
+        KeyVaultClient client = KeyVaultService.getClient(config);
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof AccessTokenKeyVaultCredential);

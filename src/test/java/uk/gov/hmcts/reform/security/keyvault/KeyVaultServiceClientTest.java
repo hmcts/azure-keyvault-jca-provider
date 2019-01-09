@@ -5,7 +5,6 @@ import com.microsoft.rest.credentials.ServiceClientCredentials;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import uk.gov.hmcts.reform.security.keyvault.credential.AccessTokenKeyVaultCredential;
 import uk.gov.hmcts.reform.security.keyvault.credential.ClientSecretKeyVaultCredential;
@@ -14,15 +13,11 @@ import java.security.ProviderException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class KeyVaultServiceClientTest {
 
     private static final String BASE_URL = "BASE_URL";
-
-    @Mock
-    private KeyVaultService keyVaultService;
 
     @Before
     public void setUp() {
@@ -44,9 +39,7 @@ public class KeyVaultServiceClientTest {
         KeyVaultConfig config = new KeyVaultConfig();
         assertEquals("MSI_URL", config.getVaultMsiUrl());
 
-        when(keyVaultService.getClient(config)).thenCallRealMethod();
-
-        KeyVaultClient client = keyVaultService.getClient(config);
+        KeyVaultClient client = KeyVaultService.getClient(config);
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof AccessTokenKeyVaultCredential);
@@ -65,9 +58,7 @@ public class KeyVaultServiceClientTest {
         assertEquals("CLIENT_ID", config.getVaultClientId());
         assertEquals("CLIENT_KEY", config.getVaultClientKey());
 
-        when(keyVaultService.getClient(config)).thenCallRealMethod();
-
-        KeyVaultClient client = keyVaultService.getClient(config);
+        KeyVaultClient client = KeyVaultService.getClient(config);
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof ClientSecretKeyVaultCredential);
@@ -86,9 +77,7 @@ public class KeyVaultServiceClientTest {
         assertEquals("CLIENT_ID", config.getVaultClientId());
         assertEquals("CLIENT_KEY", config.getVaultClientKey());
 
-        when(keyVaultService.getClient(config)).thenCallRealMethod();
-
-        KeyVaultClient client = keyVaultService.getClient(config);
+        KeyVaultClient client = KeyVaultService.getClient(config);
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof ClientSecretKeyVaultCredential);

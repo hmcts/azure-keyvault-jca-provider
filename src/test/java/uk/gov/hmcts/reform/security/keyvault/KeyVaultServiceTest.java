@@ -1,6 +1,5 @@
 package uk.gov.hmcts.reform.security.keyvault;
 
-import com.google.common.cache.CacheBuilder;
 import com.microsoft.azure.keyvault.KeyVaultClient;
 import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
@@ -34,10 +33,7 @@ public class KeyVaultServiceTest {
     public void setUp() {
         System.setProperty(KeyVaultConfig.VAULT_BASE_URL, BASE_URL);
 
-        keyVaultService = new KeyVaultService(vaultClient,
-            CacheBuilder.newBuilder().build(new KeyVaultService.KeyByAliasCacheLoader(BASE_URL, vaultClient)),
-            CacheBuilder.newBuilder().build(new KeyVaultService.KeyByIdentifierCacheLoader(vaultClient)),
-            CacheBuilder.newBuilder().build(new KeyVaultService.CertificateByAliasCacheLoader(BASE_URL, vaultClient)));
+        keyVaultService = new KeyVaultService(new KeyVaultConfig(), vaultClient);
     }
 
     /**

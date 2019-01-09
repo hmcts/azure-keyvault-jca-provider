@@ -32,23 +32,17 @@ final class KeyVaultService {
         return INSTANCE;
     }
 
-    // Used by tests to inject the vault client
-    KeyVaultService(KeyVaultClient vaultClient, LoadingCache<String, KeyBundle> keyByAliasCache, LoadingCache<String,
-        KeyBundle> keyByIdentifierCache, LoadingCache<String, CertificateBundle> certificateByAliasCache) {
-        baseUrl = System.getProperty(KeyVaultConfig.VAULT_BASE_URL);
-        this.vaultClient = vaultClient;
-        this.keyByAliasCache = keyByAliasCache;
-        this.keyByIdentifierCache = keyByIdentifierCache;
-        this.certificateByAliasCache = certificateByAliasCache;
+    private KeyVaultService() {
+        this(new KeyVaultConfig());
     }
 
-    private KeyVaultService() {
-        KeyVaultConfig keyVaultConfig = new KeyVaultConfig();
+    private KeyVaultService(KeyVaultConfig keyVaultConfig) {
+        this(keyVaultConfig, getClient(keyVaultConfig));
+    }
+
+    KeyVaultService(KeyVaultConfig keyVaultConfig, KeyVaultClient vaultClient) {
+        this.vaultClient = vaultClient;
         baseUrl = keyVaultConfig.getVaultBaseUrl();
-
-        vaultClient = getClient(keyVaultConfig);
-
-        // TODO Handle null vaultClient;
 
         keyByAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
@@ -64,7 +58,7 @@ final class KeyVaultService {
     /**
      * @should select correct client based on system properties
      */
-    public KeyVaultClient getClient(KeyVaultConfig keyVaultConfig) {
+    public static KeyVaultClient getClient(KeyVaultConfig keyVaultConfig) {
         if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
             return new KeyVaultClient(new ClientSecretKeyVaultCredential(keyVaultConfig.getVaultClientId(),
                     keyVaultConfig.getVaultClientKey()));
