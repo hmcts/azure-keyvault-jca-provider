@@ -69,7 +69,8 @@ final class KeyVaultService {
             return new KeyVaultClient(new ClientSecretKeyVaultCredential(keyVaultConfig.getVaultClientId(),
                     keyVaultConfig.getVaultClientKey()));
         } else if (StringUtils.isNotEmpty(keyVaultConfig.getVaultMsiUrl())) {
-            return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig.getVaultMsiUrl()));
+            return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig.getVaultMsiUrl(),
+                keyVaultConfig.getVaultErrorMaxRetries(), keyVaultConfig.getVaultErrorRetryIntervalMillis()));
         }
         return null;
     }

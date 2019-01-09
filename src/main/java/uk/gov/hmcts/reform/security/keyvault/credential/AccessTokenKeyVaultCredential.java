@@ -12,36 +12,34 @@ import org.apache.http.protocol.HttpContext;
 
 import java.io.IOException;
 
-import static uk.gov.hmcts.reform.security.keyvault.KeyVaultConfig.VAULT_ERROR_MAX_RETRIES;
-import static uk.gov.hmcts.reform.security.keyvault.KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS;
-
 public class AccessTokenKeyVaultCredential extends AzureTokenCredentials {
 
     private static final String METADATA_HEADER = "Metadata";
 
     private final String tokenEndpoint;
 
+    private final HttpClient httpClient;
+
     private static final TokenResponseHandler tokenResponseHandler = new TokenResponseHandler();
 
-    private static final HttpClient httpClient = HttpClientBuilder.create().setServiceUnavailableRetryStrategy(
-        new ServiceUnavailableRetryStrategy() {
-            @Override
-            public boolean retryRequest(final HttpResponse response,
-                                        final int executionCount, final HttpContext context) {
-                int statusCode = response.getStatusLine().getStatusCode();
-                return (statusCode / 100) == 5
-                    && executionCount < Integer.valueOf(System.getProperty(VAULT_ERROR_MAX_RETRIES));
-            }
-
-            @Override
-            public long getRetryInterval() {
-                return Integer.valueOf(System.getProperty(VAULT_ERROR_RETRY_INTERVAL_MILLIS));
-            }
-        }).build();
-
-    public AccessTokenKeyVaultCredential(String tokenEndpoint) {
+    public AccessTokenKeyVaultCredential(String tokenEndpoint, int maxRetries, int retryInterval) {
         super(AzureEnvironment.AZURE, null);
         this.tokenEndpoint = tokenEndpoint;
+        this.httpClient = HttpClientBuilder.create().setServiceUnavailableRetryStrategy(
+            new ServiceUnavailableRetryStrategy() {
+                @Override
+                public boolean retryRequest(final HttpResponse response,
+                                            final int executionCount, final HttpContext context) {
+                    int statusCode = response.getStatusLine().getStatusCode();
+                    return (statusCode / 100) == 5
+                        && executionCount < maxRetries;
+                }
+
+                @Override
+                public long getRetryInterval() {
+                    return retryInterval;
+                }
+            }).build();
     }
 
     @Override
