@@ -17,9 +17,6 @@ public class KeyVaultConfig {
     public static final String VAULT_ERROR_MAX_RETRIES = "azure_key_vault_msi_error_retry_max_number";
     public static final String VAULT_ERROR_RETRY_INTERVAL_MILLIS = "azure_key_vault_msi_error_retry_interval_millis";
 
-    public static final String DEFAULT_VAULT_ERROR_MAX_RETRIES = "3";
-    public static final String DEFAULT_VAULT_ERROR_RETRY_INTERVAL_MILLIS = "0";
-
     private String vaultBaseUrl;
 
     private String vaultClientId;
@@ -37,9 +34,15 @@ public class KeyVaultConfig {
         vaultClientId = System.getProperty(VAULT_CLIENT_ID);
         vaultClientKey = System.getProperty(VAULT_CLIENT_KEY);
         vaultMsiUrl = System.getProperty(VAULT_MSI_URL);
-        vaultErrorMaxRetries = Integer.valueOf(System.getProperty(VAULT_ERROR_MAX_RETRIES,
-            DEFAULT_VAULT_ERROR_MAX_RETRIES));
-        vaultErrorRetryIntervalMillis = Integer.valueOf(System.getProperty(VAULT_ERROR_RETRY_INTERVAL_MILLIS,
-            DEFAULT_VAULT_ERROR_RETRY_INTERVAL_MILLIS));
+
+        final String maxRetries = System.getProperty(VAULT_ERROR_MAX_RETRIES);
+        if (maxRetries != null) {
+            vaultErrorMaxRetries = Integer.valueOf(maxRetries);
+        }
+
+        final String retryInterval = System.getProperty(VAULT_ERROR_RETRY_INTERVAL_MILLIS);
+        if (retryInterval != null) {
+            vaultErrorRetryIntervalMillis = Integer.valueOf(retryInterval);
+        }
     }
 }
