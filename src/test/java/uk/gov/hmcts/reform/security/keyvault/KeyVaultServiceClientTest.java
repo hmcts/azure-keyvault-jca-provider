@@ -21,7 +21,6 @@ public class KeyVaultServiceClientTest {
 
     @Before
     public void setUp() {
-        System.setProperty(KeyVaultConfig.VAULT_BASE_URL, BASE_URL);
     }
 
     /**
@@ -30,13 +29,14 @@ public class KeyVaultServiceClientTest {
      */
     @Test
     public void getClient_shouldCreateAccessTokenClient() {
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "");
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "");
-        System.setProperty(KeyVaultConfig.VAULT_MSI_URL, "MSI_URL");
-        System.setProperty(KeyVaultConfig.VAULT_ERROR_MAX_RETRIES, "2");
-        System.setProperty(KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
-
         KeyVaultConfig config = new KeyVaultConfig();
+        config.setVaultBaseUrl(BASE_URL);
+        config.setVaultClientId("");
+        config.setVaultClientKey("");
+        config.setVaultMsiUrl("MSI_URL");
+        config.setVaultErrorMaxRetries(2);
+        config.setVaultErrorRetryIntervalMillis(30);
+
         assertEquals("MSI_URL", config.getVaultMsiUrl());
 
         KeyVaultClient client = KeyVaultService.getClient(config);
@@ -51,10 +51,11 @@ public class KeyVaultServiceClientTest {
      */
     @Test
     public void getClient_shouldCreateClientSecretClient() {
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "CLIENT_ID");
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "CLIENT_KEY");
-
         KeyVaultConfig config = new KeyVaultConfig();
+        config.setVaultBaseUrl(BASE_URL);
+        config.setVaultClientId("CLIENT_ID");
+        config.setVaultClientKey("CLIENT_KEY");
+
         assertEquals("CLIENT_ID", config.getVaultClientId());
         assertEquals("CLIENT_KEY", config.getVaultClientKey());
 
@@ -70,10 +71,11 @@ public class KeyVaultServiceClientTest {
      */
     @Test(expected = ProviderException.class)
     public void getClient_shouldCreateClientSecretClientAndThrowErrorWithNoAuthorization() {
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "CLIENT_ID");
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "CLIENT_KEY");
-
         KeyVaultConfig config = new KeyVaultConfig();
+        config.setVaultBaseUrl(BASE_URL);
+        config.setVaultClientId("CLIENT_ID");
+        config.setVaultClientKey("CLIENT_KEY");
+
         assertEquals("CLIENT_ID", config.getVaultClientId());
         assertEquals("CLIENT_KEY", config.getVaultClientKey());
 

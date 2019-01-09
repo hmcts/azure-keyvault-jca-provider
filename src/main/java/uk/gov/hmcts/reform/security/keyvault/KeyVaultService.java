@@ -14,9 +14,8 @@ import uk.gov.hmcts.reform.security.keyvault.credential.ClientSecretKeyVaultCred
 
 import java.util.concurrent.TimeUnit;
 
-
 final class KeyVaultService {
-    private static final KeyVaultService INSTANCE = new KeyVaultService();
+    private static volatile KeyVaultService INSTANCE;
 
     private final String baseUrl;
 
@@ -29,6 +28,14 @@ final class KeyVaultService {
     private final LoadingCache<String, CertificateBundle> certificateByAliasCache;
 
     public static KeyVaultService getInstance() {
+        if (INSTANCE == null) {
+            synchronized (KeyVaultService.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new KeyVaultService();
+                }
+            }
+        }
+
         return INSTANCE;
     }
 
@@ -42,7 +49,7 @@ final class KeyVaultService {
 
     KeyVaultService(KeyVaultConfig keyVaultConfig, KeyVaultClient vaultClient) {
         this.vaultClient = vaultClient;
-        baseUrl = keyVaultConfig.getVaultBaseUrl();
+        this.baseUrl = keyVaultConfig.getVaultBaseUrl();
 
         keyByAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
@@ -66,7 +73,8 @@ final class KeyVaultService {
             return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig.getVaultMsiUrl(),
                 keyVaultConfig.getVaultErrorMaxRetries(), keyVaultConfig.getVaultErrorRetryIntervalMillis()));
         }
-        return null;
+
+        throw new IllegalArgumentException("System properties do not define which KeyVaultClient to create");
     }
 
     /**
