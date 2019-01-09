@@ -10,6 +10,8 @@ import org.mockito.junit.MockitoJUnitRunner;
 import uk.gov.hmcts.reform.security.keyvault.credential.AccessTokenKeyVaultCredential;
 import uk.gov.hmcts.reform.security.keyvault.credential.ClientSecretKeyVaultCredential;
 
+import java.security.ProviderException;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
@@ -75,8 +77,8 @@ public class KeyVaultServiceClientTest {
      * @verifies select correct client based on system properties
      * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
      */
-    @Test
-    public void getClient_shouldCreateClientSecretClient2() {
+    @Test(expected = ProviderException.class)
+    public void getClient_shouldCreateClientSecretClientAndThrowErrorWithNoAuthorization() {
         System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "CLIENT_ID");
         System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "CLIENT_KEY");
 
@@ -90,6 +92,9 @@ public class KeyVaultServiceClientTest {
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof ClientSecretKeyVaultCredential);
+
+        ClientSecretKeyVaultCredential creds = (ClientSecretKeyVaultCredential)credentials;
+        creds.doAuthenticate("", "", "");
     }
 
     @Test
