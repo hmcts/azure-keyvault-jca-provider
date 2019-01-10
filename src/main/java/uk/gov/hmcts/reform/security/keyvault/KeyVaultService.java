@@ -9,8 +9,10 @@ import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.KeyOperationResult;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
 import org.apache.commons.lang3.StringUtils;
-import uk.gov.hmcts.reform.security.keyvault.credential.AccessTokenKeyVaultCredential;
-import uk.gov.hmcts.reform.security.keyvault.credential.ClientSecretKeyVaultCredential;
+import uk.gov.hmcts.reform.vault.config.KeyVaultClientProvider;
+import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
+import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
+import uk.gov.hmcts.reform.vault.credential.ClientSecretKeyVaultCredential;
 
 import java.util.concurrent.TimeUnit;
 

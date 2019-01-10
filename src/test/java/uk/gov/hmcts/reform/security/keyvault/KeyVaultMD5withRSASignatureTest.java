@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.MockitoJUnitRunner;
+import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
 
 @RunWith(MockitoJUnitRunner.class)
 public class KeyVaultMD5withRSASignatureTest extends KeyVaultRSASignatureTest {

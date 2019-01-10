@@ -1,4 +1,4 @@
-package uk.gov.hmcts.reform.security.keyvault.credential;
+package uk.gov.hmcts.reform.vault.credential;
 
 import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.credentials.AzureTokenCredentials;

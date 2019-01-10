@@ -1,4 +1,4 @@
-package uk.gov.hmcts.reform.security.keyvault;
+package uk.gov.hmcts.reform.vault.config;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

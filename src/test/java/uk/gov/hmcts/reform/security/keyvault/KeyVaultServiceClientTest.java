@@ -6,8 +6,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
-import uk.gov.hmcts.reform.security.keyvault.credential.AccessTokenKeyVaultCredential;
-import uk.gov.hmcts.reform.security.keyvault.credential.ClientSecretKeyVaultCredential;
+import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
+import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
+import uk.gov.hmcts.reform.vault.credential.ClientSecretKeyVaultCredential;
 
 import java.security.ProviderException;
 

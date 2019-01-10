@@ -1,4 +1,4 @@
-package uk.gov.hmcts.reform.security.keyvault.credential;
+package uk.gov.hmcts.reform.vault.credential;
 
 import com.microsoft.aad.adal4j.AuthenticationContext;
 import com.microsoft.aad.adal4j.AuthenticationResult;
