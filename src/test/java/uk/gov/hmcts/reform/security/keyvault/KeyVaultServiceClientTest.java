@@ -25,7 +25,7 @@ public class KeyVaultServiceClientTest {
 
     /**
      * @verifies select correct client based on system properties
-     * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
+     * @see KeyVaultService#getClient()
      */
     @Test
     public void getClient_shouldCreateAccessTokenClient() {
@@ -39,7 +39,8 @@ public class KeyVaultServiceClientTest {
 
         assertEquals("MSI_URL", config.getVaultMsiUrl());
 
-        KeyVaultClient client = KeyVaultService.getClient(config);
+        KeyVaultService keyVaultService = new KeyVaultService(config);
+        KeyVaultClient client = keyVaultService.getClient();
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof AccessTokenKeyVaultCredential);
@@ -47,7 +48,7 @@ public class KeyVaultServiceClientTest {
 
     /**
      * @verifies select correct client based on system properties
-     * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
+     * @see KeyVaultService#getClient()
      */
     @Test
     public void getClient_shouldCreateClientSecretClient() {
@@ -59,7 +60,8 @@ public class KeyVaultServiceClientTest {
         assertEquals("CLIENT_ID", config.getVaultClientId());
         assertEquals("CLIENT_KEY", config.getVaultClientKey());
 
-        KeyVaultClient client = KeyVaultService.getClient(config);
+        KeyVaultService keyVaultService = new KeyVaultService(config);
+        KeyVaultClient client = keyVaultService.getClient();
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof ClientSecretKeyVaultCredential);
@@ -67,7 +69,7 @@ public class KeyVaultServiceClientTest {
 
     /**
      * @verifies select correct client based on system properties
-     * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
+     * @see KeyVaultService#getClient()
      */
     @Test(expected = ProviderException.class)
     public void getClient_shouldCreateClientSecretClientAndThrowErrorWithNoAuthorization() {
@@ -79,7 +81,8 @@ public class KeyVaultServiceClientTest {
         assertEquals("CLIENT_ID", config.getVaultClientId());
         assertEquals("CLIENT_KEY", config.getVaultClientKey());
 
-        KeyVaultClient client = KeyVaultService.getClient(config);
+        KeyVaultService keyVaultService = new KeyVaultService(config);
+        KeyVaultClient client = keyVaultService.getClient();
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof ClientSecretKeyVaultCredential);

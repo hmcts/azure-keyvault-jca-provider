@@ -17,8 +17,6 @@ public class TokenResponseHandler implements ResponseHandler<String> {
 
     private static final String ACCESS_TOKEN_KEY = "access_token";
 
-    private static volatile TokenResponseHandler instance;
-
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @Override

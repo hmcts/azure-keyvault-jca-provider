@@ -119,7 +119,7 @@ public class AccessTokenKeyVaultCredentialTest {
 
     /**
      * @verifies select correct client based on system properties
-     * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
+     * @see KeyVaultService#getClient()
      */
     @Test
     public void getClient_shouldCreateAccessTokenClientAndHandleDummyServerResponses() {
@@ -132,7 +132,8 @@ public class AccessTokenKeyVaultCredentialTest {
         KeyVaultConfig config = new KeyVaultConfig();
         assertEquals(VAULT_MSI_URL, config.getVaultMsiUrl());
 
-        KeyVaultClient client = KeyVaultService.getClient(config);
+        KeyVaultService keyVaultService = new KeyVaultService(config);
+        KeyVaultClient client = keyVaultService.getClient();
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof AccessTokenKeyVaultCredential);
@@ -148,7 +149,7 @@ public class AccessTokenKeyVaultCredentialTest {
 
     /**
      * @verifies select correct client based on system properties
-     * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
+     * @see KeyVaultService#getClient()
      */
     @Test
     public void getClient_shouldCreateAccessTokenClientAndHandleDummyServerResponsesWithNoAccessToken() {
@@ -162,7 +163,8 @@ public class AccessTokenKeyVaultCredentialTest {
 
         KeyVaultConfig config = new KeyVaultConfig();
 
-        KeyVaultClient client = KeyVaultService.getClient(config);
+        KeyVaultService keyVaultService = new KeyVaultService(config);
+        KeyVaultClient client = keyVaultService.getClient();
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof AccessTokenKeyVaultCredential);
@@ -172,7 +174,7 @@ public class AccessTokenKeyVaultCredentialTest {
 
     /**
      * @verifies select correct client based on system properties
-     * @see KeyVaultService#getClient(KeyVaultConfig keyVaultConfig)
+     * @see KeyVaultService#getClient()
      */
     @Test
     public void getClient_shouldCreateAccessTokenClientAndHandleDummyServerResponsesWithServerError() {
@@ -187,7 +189,8 @@ public class AccessTokenKeyVaultCredentialTest {
 
         KeyVaultConfig config = new KeyVaultConfig();
 
-        KeyVaultClient client = KeyVaultService.getClient(config);
+        KeyVaultService keyVaultService = new KeyVaultService(config);
+        KeyVaultClient client = keyVaultService.getClient();
         ServiceClientCredentials credentials = client.restClient().credentials();
 
         assertTrue(credentials instanceof AccessTokenKeyVaultCredential);

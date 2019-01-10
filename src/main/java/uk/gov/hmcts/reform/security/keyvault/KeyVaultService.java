@@ -43,8 +43,21 @@ final class KeyVaultService {
         this(new KeyVaultConfig());
     }
 
-    private KeyVaultService(KeyVaultConfig keyVaultConfig) {
-        this(keyVaultConfig, getClient(keyVaultConfig));
+    KeyVaultService(KeyVaultConfig keyVaultConfig) {
+        this(keyVaultConfig, new KeyVaultClientProvider() {
+            @Override
+            public KeyVaultClient getClient(KeyVaultConfig keyVaultConfig) {
+                if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
+                    return new KeyVaultClient(new ClientSecretKeyVaultCredential(keyVaultConfig.getVaultClientId(),
+                        keyVaultConfig.getVaultClientKey()));
+                } else if (StringUtils.isNotEmpty(keyVaultConfig.getVaultMsiUrl())) {
+                    return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig.getVaultMsiUrl(),
+                        keyVaultConfig.getVaultErrorMaxRetries(), keyVaultConfig.getVaultErrorRetryIntervalMillis()));
+                }
+
+                throw new IllegalArgumentException("System properties do not define which KeyVaultClient to create");
+            }
+        }.getClient(keyVaultConfig));
     }
 
     KeyVaultService(KeyVaultConfig keyVaultConfig, KeyVaultClient vaultClient) {
@@ -62,19 +75,8 @@ final class KeyVaultService {
             .build(new CertificateByAliasCacheLoader(baseUrl, vaultClient));
     }
 
-    /**
-     * @should select correct client based on system properties
-     */
-    public static KeyVaultClient getClient(KeyVaultConfig keyVaultConfig) {
-        if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
-            return new KeyVaultClient(new ClientSecretKeyVaultCredential(keyVaultConfig.getVaultClientId(),
-                    keyVaultConfig.getVaultClientKey()));
-        } else if (StringUtils.isNotEmpty(keyVaultConfig.getVaultMsiUrl())) {
-            return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig.getVaultMsiUrl(),
-                keyVaultConfig.getVaultErrorMaxRetries(), keyVaultConfig.getVaultErrorRetryIntervalMillis()));
-        }
-
-        throw new IllegalArgumentException("System properties do not define which KeyVaultClient to create");
+    protected KeyVaultClient getClient() {
+        return this.vaultClient;
     }
 
     /**
