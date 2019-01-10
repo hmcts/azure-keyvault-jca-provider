@@ -3,6 +3,7 @@ package uk.gov.hmcts.reform.security.keyvault.credential;
 import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.credentials.AzureTokenCredentials;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.ServiceUnavailableRetryStrategy;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -31,7 +32,7 @@ public class AccessTokenKeyVaultCredential extends AzureTokenCredentials {
                 public boolean retryRequest(final HttpResponse response,
                                             final int executionCount, final HttpContext context) {
                     int statusCode = response.getStatusLine().getStatusCode();
-                    return (statusCode / 100) == 5
+                    return statusCode >= HttpStatus.SC_INTERNAL_SERVER_ERROR
                         && executionCount < maxRetries;
                 }
 
