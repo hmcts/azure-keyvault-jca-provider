@@ -42,7 +42,7 @@ final class KeyVaultService {
     }
 
     private KeyVaultService() {
-        this(new KeyVaultConfigBuilder().build());
+        this(new SystemPropertyKeyVaultConfigBuilder().build());
     }
 
     KeyVaultService(KeyVaultConfig keyVaultConfig) {

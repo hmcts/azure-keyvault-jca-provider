@@ -31,9 +31,9 @@ public class KeyVaultServiceTest {
 
     @Before
     public void setUp() {
-        System.setProperty(KeyVaultConfigBuilder.VAULT_BASE_URL, BASE_URL);
+        System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_BASE_URL, BASE_URL);
 
-        keyVaultService = new KeyVaultService(new KeyVaultConfigBuilder().build(), vaultClient);
+        keyVaultService = new KeyVaultService(new SystemPropertyKeyVaultConfigBuilder().build(), vaultClient);
     }
 
     /**

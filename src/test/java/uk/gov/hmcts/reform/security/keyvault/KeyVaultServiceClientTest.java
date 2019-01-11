@@ -30,7 +30,7 @@ public class KeyVaultServiceClientTest {
      */
     @Test
     public void getClient_shouldCreateAccessTokenClient() {
-        KeyVaultConfig config = new KeyVaultConfigBuilder().build();
+        KeyVaultConfig config = new SystemPropertyKeyVaultConfigBuilder().build();
         config.setVaultBaseUrl(BASE_URL);
         config.setVaultClientId("");
         config.setVaultClientKey("");
@@ -53,7 +53,7 @@ public class KeyVaultServiceClientTest {
      */
     @Test
     public void getClient_shouldCreateClientSecretClient() {
-        KeyVaultConfig config = new KeyVaultConfigBuilder().build();
+        KeyVaultConfig config = new SystemPropertyKeyVaultConfigBuilder().build();
         config.setVaultBaseUrl(BASE_URL);
         config.setVaultClientId("CLIENT_ID");
         config.setVaultClientKey("CLIENT_KEY");
@@ -74,7 +74,7 @@ public class KeyVaultServiceClientTest {
      */
     @Test(expected = ProviderException.class)
     public void getClient_shouldCreateClientSecretClientAndThrowErrorWithNoAuthorization() {
-        KeyVaultConfig config = new KeyVaultConfigBuilder().build();
+        KeyVaultConfig config = new SystemPropertyKeyVaultConfigBuilder().build();
         config.setVaultBaseUrl(BASE_URL);
         config.setVaultClientId("CLIENT_ID");
         config.setVaultClientKey("CLIENT_KEY");
@@ -94,7 +94,7 @@ public class KeyVaultServiceClientTest {
 
     @Test
     public void testKeyVaultConfigEquals_Symmetric() {
-        KeyVaultConfig config1 = new KeyVaultConfigBuilder().build();
+        KeyVaultConfig config1 = new SystemPropertyKeyVaultConfigBuilder().build();
         config1.setVaultClientId("CLIENT_ID");
         config1.setVaultClientKey("CLIENT_KEY");
         config1.setVaultMsiUrl("MSI_URL");
@@ -102,7 +102,7 @@ public class KeyVaultServiceClientTest {
         config1.setVaultErrorRetryIntervalMillis(10);
         config1.setVaultBaseUrl("BASE_URL");
 
-        KeyVaultConfig config2 = new KeyVaultConfigBuilder().build();
+        KeyVaultConfig config2 = new SystemPropertyKeyVaultConfigBuilder().build();
         config2.setVaultClientId("CLIENT_ID");
         config2.setVaultClientKey("CLIENT_KEY");
         config2.setVaultMsiUrl("MSI_URL");

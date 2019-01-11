@@ -2,7 +2,7 @@ package uk.gov.hmcts.reform.security.keyvault;
 
 import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
 
-public class KeyVaultConfigBuilder {
+public class SystemPropertyKeyVaultConfigBuilder {
 
     public static final String VAULT_BASE_URL = "azure_key_vault_base_url";
     public static final String VAULT_CLIENT_ID = "azure_client_id";
@@ -11,7 +11,7 @@ public class KeyVaultConfigBuilder {
     public static final String VAULT_ERROR_MAX_RETRIES = "azure_key_vault_msi_error_retry_max_number";
     public static final String VAULT_ERROR_RETRY_INTERVAL_MILLIS = "azure_key_vault_msi_error_retry_interval_millis";
 
-    public KeyVaultConfigBuilder() {
+    public SystemPropertyKeyVaultConfigBuilder() {
     }
 
     public KeyVaultConfig build() {
