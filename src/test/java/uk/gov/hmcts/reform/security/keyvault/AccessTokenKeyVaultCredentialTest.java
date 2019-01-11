@@ -20,7 +20,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
-import uk.gov.hmcts.reform.vault.config.KeyVaultConfigBuilder;
 import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
 
 import java.util.Map;

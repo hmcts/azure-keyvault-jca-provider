@@ -1,4 +1,6 @@
-package uk.gov.hmcts.reform.vault.config;
+package uk.gov.hmcts.reform.security.keyvault;
+
+import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
 
 public class KeyVaultConfigBuilder {
 
