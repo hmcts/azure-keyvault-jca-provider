@@ -6,7 +6,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
+import uk.gov.hmcts.reform.vault.config.KeyVaultConfigBuilder;
 
 import java.security.InvalidKeyException;
 
@@ -24,9 +24,9 @@ abstract class KeyVaultRSASignatureTest {
 
     @Before
     public void setUp() {
-        System.setProperty(KeyVaultConfig.VAULT_BASE_URL, "BASE_URL");
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "CLIENT_ID");
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "CLIENT_KEY");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_BASE_URL, "BASE_URL");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_CLIENT_ID, "CLIENT_ID");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_CLIENT_KEY, "CLIENT_KEY");
     }
 
     /**

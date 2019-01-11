@@ -9,7 +9,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
+import uk.gov.hmcts.reform.vault.config.KeyVaultConfigBuilder;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.BDDMockito.given;
@@ -32,9 +32,9 @@ public class KeyVaultServiceTest {
 
     @Before
     public void setUp() {
-        System.setProperty(KeyVaultConfig.VAULT_BASE_URL, BASE_URL);
+        System.setProperty(KeyVaultConfigBuilder.VAULT_BASE_URL, BASE_URL);
 
-        keyVaultService = new KeyVaultService(new KeyVaultConfig(), vaultClient);
+        keyVaultService = new KeyVaultService(new KeyVaultConfigBuilder().build(), vaultClient);
     }
 
     /**

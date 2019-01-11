@@ -11,6 +11,7 @@ import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
 import org.apache.commons.lang3.StringUtils;
 import uk.gov.hmcts.reform.vault.config.KeyVaultClientProvider;
 import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
+import uk.gov.hmcts.reform.vault.config.KeyVaultConfigBuilder;
 import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
 import uk.gov.hmcts.reform.vault.credential.ClientSecretKeyVaultCredential;
 
@@ -42,7 +43,7 @@ final class KeyVaultService {
     }
 
     private KeyVaultService() {
-        this(new KeyVaultConfig());
+        this(new KeyVaultConfigBuilder().build());
     }
 
     KeyVaultService(KeyVaultConfig keyVaultConfig) {

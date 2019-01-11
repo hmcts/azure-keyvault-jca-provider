@@ -20,6 +20,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
+import uk.gov.hmcts.reform.vault.config.KeyVaultConfigBuilder;
 import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
 
 import java.util.Map;
@@ -78,7 +79,7 @@ public class AccessTokenKeyVaultCredentialTest {
 
     @Before
     public void setUp() {
-        System.setProperty(KeyVaultConfig.VAULT_BASE_URL, BASE_URL);
+        System.setProperty(KeyVaultConfigBuilder.VAULT_BASE_URL, BASE_URL);
 
         wireMockServer = new WireMockServer(options()
             .port(DUMMY_VAULT_SERVER_PORT)
@@ -124,13 +125,13 @@ public class AccessTokenKeyVaultCredentialTest {
      */
     @Test
     public void getClient_shouldCreateAccessTokenClientAndHandleDummyServerResponses() {
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "");
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "");
-        System.setProperty(KeyVaultConfig.VAULT_MSI_URL, VAULT_MSI_URL);
-        System.setProperty(KeyVaultConfig.VAULT_ERROR_MAX_RETRIES, "2");
-        System.setProperty(KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_CLIENT_ID, "");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_CLIENT_KEY, "");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_MSI_URL, VAULT_MSI_URL);
+        System.setProperty(KeyVaultConfigBuilder.VAULT_ERROR_MAX_RETRIES, "2");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
 
-        KeyVaultConfig config = new KeyVaultConfig();
+        KeyVaultConfig config = new KeyVaultConfigBuilder().build();
         assertEquals(VAULT_MSI_URL, config.getVaultMsiUrl());
 
         KeyVaultService keyVaultService = new KeyVaultService(config);
@@ -156,13 +157,13 @@ public class AccessTokenKeyVaultCredentialTest {
     public void getClient_shouldCreateAccessTokenClientAndHandleDummyServerResponsesWithNoAccessToken() {
         thrown.expectMessage("No access_token parameter present in response");
 
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "");
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "");
-        System.setProperty(KeyVaultConfig.VAULT_MSI_URL, VAULT_MSI_INVALID_RESPONSE_URL);
-        System.setProperty(KeyVaultConfig.VAULT_ERROR_MAX_RETRIES, "2");
-        System.setProperty(KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_CLIENT_ID, "");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_CLIENT_KEY, "");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_MSI_URL, VAULT_MSI_INVALID_RESPONSE_URL);
+        System.setProperty(KeyVaultConfigBuilder.VAULT_ERROR_MAX_RETRIES, "2");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
 
-        KeyVaultConfig config = new KeyVaultConfig();
+        KeyVaultConfig config = new KeyVaultConfigBuilder().build();
 
         KeyVaultService keyVaultService = new KeyVaultService(config);
         KeyVaultClient client = keyVaultService.getClient();
@@ -181,14 +182,14 @@ public class AccessTokenKeyVaultCredentialTest {
     public void getClient_shouldCreateAccessTokenClientAndHandleDummyServerResponsesWithServerError() {
         thrown.expectMessage("Server Error");
 
-        System.setProperty(KeyVaultConfig.VAULT_BASE_URL, BASE_URL);
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_ID, "");
-        System.setProperty(KeyVaultConfig.VAULT_CLIENT_KEY, "");
-        System.setProperty(KeyVaultConfig.VAULT_MSI_URL, "http://localhost:" + DUMMY_VAULT_SERVER_PORT + "/error/42");
-        System.setProperty(KeyVaultConfig.VAULT_ERROR_MAX_RETRIES, "2");
-        System.setProperty(KeyVaultConfig.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_BASE_URL, BASE_URL);
+        System.setProperty(KeyVaultConfigBuilder.VAULT_CLIENT_ID, "");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_CLIENT_KEY, "");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_MSI_URL, "http://localhost:" + DUMMY_VAULT_SERVER_PORT + "/error/42");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_ERROR_MAX_RETRIES, "2");
+        System.setProperty(KeyVaultConfigBuilder.VAULT_ERROR_RETRY_INTERVAL_MILLIS, "30");
 
-        KeyVaultConfig config = new KeyVaultConfig();
+        KeyVaultConfig config = new KeyVaultConfigBuilder().build();
 
         KeyVaultService keyVaultService = new KeyVaultService(config);
         KeyVaultClient client = keyVaultService.getClient();
