@@ -4,6 +4,13 @@ import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
 
 public class SystemPropertyKeyVaultConfigBuilder {
 
+    public static final String DEFAULT_VAULT_MSI_URL = "http://169.254.169.254/metadata/identity/oauth2/"
+        + "token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net";
+
+    public static final String DEFAULT_VAULT_ERROR_MAX_RETRIES = "0";
+
+    public static final String DEFAULT_VAULT_ERROR_RETRY_INTERVAL_MILLIS = "200";
+
     public static final String VAULT_BASE_URL = "azure_key_vault_base_url";
     public static final String VAULT_CLIENT_ID = "azure_client_id";
     public static final String VAULT_CLIENT_KEY = "azure_client_secret";
@@ -16,27 +23,16 @@ public class SystemPropertyKeyVaultConfigBuilder {
 
     public KeyVaultConfig build() {
         KeyVaultConfig config = new KeyVaultConfig();
-        config.setVaultBaseUrl(getProperty(VAULT_BASE_URL));
-        config.setVaultClientId(getProperty(VAULT_CLIENT_ID));
-        config.setVaultClientKey(getProperty(VAULT_CLIENT_KEY));
-        config.setVaultMsiUrl(getProperty(VAULT_MSI_URL));
-        config.setVaultErrorMaxRetries(getIntProperty(VAULT_ERROR_MAX_RETRIES));
-        config.setVaultErrorRetryIntervalMillis(getIntProperty(VAULT_ERROR_RETRY_INTERVAL_MILLIS));
+        config.setVaultBaseUrl(System.getProperty(VAULT_BASE_URL));
+        config.setVaultClientId(System.getProperty(VAULT_CLIENT_ID));
+        config.setVaultClientKey(System.getProperty(VAULT_CLIENT_KEY));
+        config.setVaultMsiUrl(System.getProperty(VAULT_MSI_URL, DEFAULT_VAULT_MSI_URL));
+        config.setVaultErrorMaxRetries(Integer.valueOf(System.getProperty(VAULT_ERROR_MAX_RETRIES,
+            DEFAULT_VAULT_ERROR_MAX_RETRIES)));
+        config.setVaultErrorRetryIntervalMillis(Integer.valueOf(System.getProperty(VAULT_ERROR_RETRY_INTERVAL_MILLIS,
+            DEFAULT_VAULT_ERROR_RETRY_INTERVAL_MILLIS)));
 
         return config;
-    }
-
-    private String getProperty(String propertyName) {
-        return System.getProperty(propertyName);
-    }
-
-    private int getIntProperty(String propertyName) {
-        String propertyValue = System.getProperty(propertyName);
-        if (propertyValue != null) {
-            return  Integer.valueOf(propertyValue);
-        }
-
-        return 0;
     }
 }
 
