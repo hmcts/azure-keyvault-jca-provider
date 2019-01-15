@@ -3,6 +3,7 @@ package uk.gov.hmcts.reform.security.keyvault;
 import com.microsoft.azure.keyvault.models.KeyOperationResult;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 
@@ -19,6 +20,13 @@ abstract class KeyVaultRSASignatureTest {
 
     @Mock
     private KeyVaultService vaultService;
+
+    @Before
+    public void setUp() {
+        System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_BASE_URL, "BASE_URL");
+        System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_CLIENT_ID, "CLIENT_ID");
+        System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_CLIENT_KEY, "CLIENT_KEY");
+    }
 
     /**
      * Each subclass should construct the signature using the default no-args constructor

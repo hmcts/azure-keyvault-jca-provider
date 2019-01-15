@@ -9,12 +9,18 @@ plugins {
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
-version = '1.0.1'
+version = '2.0.0'
 
 dependencies {
+
+  compile 'org.projectlombok:lombok:1.18.2'
+
   implementation 'com.google.guava:guava:24.1-jre'
   implementation 'com.microsoft.azure:azure-keyvault:1.0.0'
   implementation 'com.microsoft.azure:adal4j:1.5.0'
+
+  implementation 'org.apache.httpcomponents:httpclient:4.5.6'
+  implementation 'org.apache.commons:commons-lang3:3.0'
 
   // Azure-KeyVault dependency uses an older version of databind which
   // has been flagged by the dependency-checker plugin
@@ -24,6 +30,7 @@ dependencies {
 
   // Use JUnit test framework
   testImplementation 'org.mockito:mockito-core:2.17.0'
+  testImplementation "com.github.tomakehurst:wiremock:2.19.0"
   testImplementation 'junit:junit:4.12'
 }
 

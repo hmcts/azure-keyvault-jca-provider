@@ -1,12 +1,10 @@
 package uk.gov.hmcts.reform.security.keyvault;
 
-import com.google.common.cache.CacheBuilder;
 import com.microsoft.azure.keyvault.KeyVaultClient;
 import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -26,11 +24,6 @@ public class KeyVaultServiceTest {
 
     private static final String KEY_IDENTIFIER = "KEY_ID";
 
-    @BeforeClass
-    public static void beforeClass() {
-        System.setProperty(KeyVaultService.BASE_URL_PROPERTY, BASE_URL);
-    }
-
     @Mock
     private KeyVaultClient vaultClient;
 
@@ -38,10 +31,9 @@ public class KeyVaultServiceTest {
 
     @Before
     public void setUp() {
-        keyVaultService = new KeyVaultService(vaultClient,
-            CacheBuilder.newBuilder().build(new KeyVaultService.KeyByAliasCacheLoader(BASE_URL, vaultClient)),
-            CacheBuilder.newBuilder().build(new KeyVaultService.KeyByIdentifierCacheLoader(vaultClient)),
-            CacheBuilder.newBuilder().build(new KeyVaultService.CertificateByAliasCacheLoader(BASE_URL, vaultClient)));
+        System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_BASE_URL, BASE_URL);
+
+        keyVaultService = new KeyVaultService(new SystemPropertyKeyVaultConfigBuilder().build(), vaultClient);
     }
 
     /**
