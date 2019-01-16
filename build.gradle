@@ -9,7 +9,7 @@ plugins {
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
-version = '2.0.0'
+version = '1.1.0'
 
 dependencies {
 
