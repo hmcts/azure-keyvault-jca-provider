@@ -9,11 +9,12 @@ plugins {
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
-version = '1.1.0'
+version = '1.1.1'
 
 dependencies {
 
-  compile 'org.projectlombok:lombok:1.18.2'
+  implementation 'org.projectlombok:lombok:1.18.2'
+  implementation 'ch.qos.logback:logback-classic:1.2.3'
 
   implementation 'com.google.guava:guava:24.1-jre'
   implementation 'com.microsoft.azure:azure-keyvault:1.0.0'
@@ -24,7 +25,7 @@ dependencies {
 
   // Azure-KeyVault dependency uses an older version of databind which
   // has been flagged by the dependency-checker plugin
-  implementation('com.fasterxml.jackson.core:jackson-databind:2.9.5') {
+  implementation('com.fasterxml.jackson.core:jackson-databind:2.9.8') {
     force = true
   }
 
