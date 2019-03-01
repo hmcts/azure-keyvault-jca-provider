@@ -9,13 +9,12 @@ plugins {
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
-version = '1.1.1'
+version = '1.1.2'
 
 dependencies {
 
   implementation 'org.projectlombok:lombok:1.18.2'
-  implementation 'ch.qos.logback:logback-classic:1.2.3'
-
+  
   implementation 'com.google.guava:guava:24.1-jre'
   implementation 'com.microsoft.azure:azure-keyvault:1.0.0'
   implementation 'com.microsoft.azure:adal4j:1.5.0'
