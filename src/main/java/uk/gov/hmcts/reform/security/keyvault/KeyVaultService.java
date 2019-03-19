@@ -116,7 +116,8 @@ final class KeyVaultService {
     }
 
     /**
-     * @should call delegate
+     * @should call delegate if key is SecretKey
+     * @should throw exception if key is unsupported
      */
     public SecretBundle setKeyByAlias(String alias, Key key) {
         if (key instanceof SecretKey) {
@@ -130,7 +131,7 @@ final class KeyVaultService {
     }
 
     /**
-     * @should call delegate
+     * @should call delegate and return parsed list
      */
     public List<String> engineAliases() {
         List<String> allKeys = new ArrayList<>();

@@ -2,6 +2,7 @@ package uk.gov.hmcts.reform.security.keyvault;
 
 import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
+import com.microsoft.azure.keyvault.models.SecretBundle;
 import com.microsoft.azure.keyvault.webkey.JsonWebKey;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType;
 import org.junit.Test;
@@ -10,18 +11,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import javax.crypto.SecretKey;
 import java.security.Key;
+import java.security.KeyStore;
 import java.security.ProviderException;
 import java.security.cert.Certificate;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Enumeration;
 
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -87,17 +87,19 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies throw provider exception for secret key
+     * @verifies fetch Secret Key if Key by Alias fails
      * @see KeyVaultKeyStore#engineGetKey(String, char[])
      */
-    @Test(expected = ProviderException.class)
-    public void engineGetKey_shouldThrowProviderExceptionForSecretKey() {
+    @Test
+    public void engineGetKey_shouldFetchSecretKeyIfKeyByAliasFails() {
         char[] password = "password".toCharArray();
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(null);
+        SecretBundle keyBundle = new SecretBundle().withValue("value");
+        given(vaultService.getSecretByAlias(eq(ALIAS))).willReturn(keyBundle);
 
         keyStore.engineGetKey(ALIAS, password);
 
-        verify(vaultService).getKeyByAlias(eq(ALIAS));
+        verify(vaultService).getSecretByAlias(eq(ALIAS));
     }
 
 
@@ -154,15 +156,6 @@ public class KeyVaultKeyStoreTest {
 
     /**
      * @verifies throw exception
-     * @see KeyVaultKeyStore#engineSetKeyEntry(String, Key, char[], java.security.cert.Certificate[])
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineSetKeyEntry_shouldThrowException() {
-        keyStore.engineSetKeyEntry(ALIAS, null, null, null);
-    }
-
-    /**
-     * @verifies throw exception
      * @see KeyVaultKeyStore#engineSetKeyEntry(String, byte[], java.security.cert.Certificate[])
      */
     @Test(expected = UnsupportedOperationException.class)
@@ -177,15 +170,6 @@ public class KeyVaultKeyStoreTest {
     @Test(expected = UnsupportedOperationException.class)
     public void engineSetCertificateEntry_shouldThrowException() {
         keyStore.engineSetCertificateEntry(ALIAS, null);
-    }
-
-    /**
-     * @verifies throw exception
-     * @see KeyVaultKeyStore#engineDeleteEntry(String)
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineDeleteEntry_shouldThrowException() {
-        keyStore.engineDeleteEntry(ALIAS);
     }
 
     /**
@@ -247,24 +231,6 @@ public class KeyVaultKeyStoreTest {
 
     /**
      * @verifies throw exception
-     * @see KeyVaultKeyStore#engineIsKeyEntry(String)
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineIsKeyEntry_shouldThrowException() {
-        keyStore.engineIsKeyEntry(ALIAS);
-    }
-
-    /**
-     * @verifies throw exception
-     * @see KeyVaultKeyStore#engineIsCertificateEntry(String)
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineIsCertificateEntry_shouldThrowException() {
-        keyStore.engineIsCertificateEntry(ALIAS);
-    }
-
-    /**
-     * @verifies throw exception
      * @see KeyVaultKeyStore#engineGetCertificateAlias(java.security.cert.Certificate)
      */
     @Test(expected = UnsupportedOperationException.class)
@@ -273,11 +239,96 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies throw exception
-     * @see KeyVaultKeyStore#engineStore(java.io.OutputStream, char[])
+     * @verifies return true if alias is within list
+     * @see KeyVaultKeyStore#engineIsKeyEntry(String)
      */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineStore_shouldThrowException() {
-        keyStore.engineStore(null, null);
+    @Test
+    public void engineIsKeyEntry_shouldReturnTrueIfAliasIsWithinList() {
+        given(vaultService.engineAliases()).willReturn(Collections.singletonList(ALIAS));
+        assertTrue(keyStore.engineIsKeyEntry(ALIAS));
+    }
+
+    /**
+     * @verifies return false if alias is not within list
+     * @see KeyVaultKeyStore#engineIsKeyEntry(String)
+     */
+    @Test
+    public void engineIsKeyEntry_shouldReturnFalseIfAliasIsNotWithinList() {
+        given(vaultService.engineAliases()).willReturn(Collections.EMPTY_LIST);
+        assertFalse(keyStore.engineIsKeyEntry(ALIAS));
+    }
+
+    /**
+     * @verifies return false if entry isn't in keyvault
+     * @see KeyVaultKeyStore#engineEntryInstanceOf(String, Class)
+     */
+    @Test
+    public void engineEntryInstanceOf_shouldReturnFalseIfEntryIsntInKeyvault() throws Exception {
+        given(vaultService.getKeyByAlias(ALIAS)).willReturn(null);
+        given(vaultService.getCertificateByAlias(ALIAS)).willReturn(null);
+        assertFalse(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.TrustedCertificateEntry.class));
+        assertFalse(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.PrivateKeyEntry.class));
+        assertFalse(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.SecretKeyEntry.class));
+    }
+
+    /**
+     * @verifies return entry is certificate or entry is secret
+     * @see KeyVaultKeyStore#engineEntryInstanceOf(String, Class)
+     */
+    @Test
+    public void engineEntryInstanceOf_shouldReturnEntryIsCertificateOrEntryIsSecret() {
+        KeyBundle keyBundle = mock(KeyBundle.class);
+        CertificateBundle certificateBundle = mock(CertificateBundle.class);
+        given(vaultService.getKeyByAlias(ALIAS)).willReturn(keyBundle);
+        given(vaultService.getCertificateByAlias(ALIAS)).willReturn(certificateBundle);
+        assertTrue(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.TrustedCertificateEntry.class));
+        assertTrue(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.PrivateKeyEntry.class));
+        assertTrue(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.SecretKeyEntry.class));
+    }
+
+    /**
+     * @verifies Call Delegate
+     * @see KeyVaultKeyStore#engineDeleteEntry(String)
+     */
+    @Test
+    public void engineDeleteEntry_shouldCallDelegate() {
+        SecretBundle secretBundle = mock(SecretBundle.class);
+        given(vaultService.deleteSecretByAlias(ALIAS)).willReturn(secretBundle);
+        keyStore.engineDeleteEntry(ALIAS);
+        verify(vaultService).deleteSecretByAlias(ALIAS);
+    }
+
+    /**
+     * @verifies return true if certificate is in keyvault
+     * @see KeyVaultKeyStore#engineIsCertificateEntry(String)
+     */
+    @Test
+    public void engineIsCertificateEntry_shouldReturnTrueIfCertificateIsInKeyvault() throws Exception {
+        CertificateBundle certificateBundle = mock(CertificateBundle.class);
+        given(vaultService.getCertificateByAlias(ALIAS)).willReturn(certificateBundle);
+        assertTrue(keyStore.engineIsCertificateEntry(ALIAS));
+    }
+
+    /**
+     * @verifies call Delegate
+     * @see KeyVaultKeyStore#engineSetKeyEntry(String, Key, char[], Certificate[])
+     */
+    @Test
+    public void engineSetKeyEntry_shouldCallDelegate() {
+        SecretKey key = mock(SecretKey.class);
+        SecretBundle secretBundle = mock(SecretBundle.class);
+        given(vaultService.setKeyByAlias(ALIAS, key)).willReturn(secretBundle);
+        keyStore.engineSetKeyEntry(ALIAS, key, null, null);
+        verify(vaultService).setKeyByAlias(ALIAS, key);
+    }
+
+    /**
+     * @verifies return false if certificate isn't in keyvault
+     * @see KeyVaultKeyStore#engineIsCertificateEntry(String)
+     */
+    @Test
+    public void engineIsCertificateEntry_shouldReturnFalseIfCertificateIsntInKeyvault() throws Exception {
+        given(vaultService.getCertificateByAlias(ALIAS)).willReturn(null);
+        assertFalse(keyStore.engineIsCertificateEntry(ALIAS));
     }
 }

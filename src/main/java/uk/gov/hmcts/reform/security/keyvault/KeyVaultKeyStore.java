@@ -30,7 +30,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     /**
      * @should return rsa private key for rsa alias
      * @should throw provider exception for unsupported key type
-     * @should throw provider exception for secret key
+     * @should fetch Secret Key if Key by Alias fails
      */
     @Override
     public Key engineGetKey(String alias, char[] password) {
@@ -159,7 +159,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should throw exception
+     * @should return true if alias is within list
+     * @should return false if alias is not within list
      */
     @Override
     public boolean engineIsKeyEntry(String alias) {
@@ -168,7 +169,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should throw exception
+     * @should return true if certificate is in keyvault
+     * @should return false if certificate isn't in keyvault
      */
     @Override
     public boolean engineIsCertificateEntry(String alias) {
@@ -176,7 +178,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should entry is certificate or entry is secret
+     * @should return entry is certificate or entry is secret
+     * @should return false if entry isn't in keyvault
      */
     @Override
     public boolean engineEntryInstanceOf(String alias,
@@ -201,7 +204,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should throw exception
+     * does nothing
      */
     @Override
     public void engineStore(OutputStream stream, char[] password) {
