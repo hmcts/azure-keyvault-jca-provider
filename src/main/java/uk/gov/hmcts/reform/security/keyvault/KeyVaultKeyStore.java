@@ -2,13 +2,16 @@ package uk.gov.hmcts.reform.security.keyvault;
 
 import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
+import com.microsoft.azure.keyvault.models.SecretBundle;
 import com.microsoft.azure.keyvault.webkey.JsonWebKey;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType;
 
+import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.Key;
+import java.security.KeyStore;
 import java.security.KeyStoreSpi;
 import java.security.ProviderException;
 import java.security.cert.Certificate;
@@ -18,6 +21,7 @@ import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.List;
 
 public final class KeyVaultKeyStore extends KeyStoreSpi {
 
@@ -42,9 +46,14 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
             }
         } else {
             // Try looking up a secret based on this alias
-            // TODO may need to support this functionality in the future
-            throw new ProviderException("Secret-based keys are not implemented");
+            SecretBundle bundle = vaultService.getSecretByAlias(alias);
+            if (bundle != null) {
+                KeyStore.SecretKeyEntry entry = new KeyStore
+                    .SecretKeyEntry(new SecretKeySpec(bundle.value().getBytes(), "RAW"));
+                return entry.getSecretKey();
+            }
         }
+        return null;
     }
 
     /**
@@ -86,11 +95,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should throw exception
+     * @should call Delegate
      */
     @Override
     public void engineSetKeyEntry(String alias, Key key, char[] password, Certificate[] chain) {
-        throw new UnsupportedOperationException();
+        vaultService.setKeyByAlias(alias, key);
     }
 
     /**
@@ -110,11 +119,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should throw exception
+     * @should Call Delegate
      */
     @Override
     public void engineDeleteEntry(String alias) {
-        throw new UnsupportedOperationException();
+        vaultService.deleteSecretByAlias(alias);
     }
 
     /**
@@ -122,7 +131,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Enumeration<String> engineAliases() {
-        return Collections.emptyEnumeration();
+        return Collections.enumeration(vaultService.engineAliases());
     }
 
     /**
@@ -133,7 +142,9 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     @Override
     public boolean engineContainsAlias(String alias) {
         try {
-            return vaultService.getKeyByAlias(alias) != null || vaultService.getCertificateByAlias(alias) != null;
+            return vaultService.getKeyByAlias(alias) != null
+                || vaultService.getSecretByAlias(alias) != null
+                || vaultService.getCertificateByAlias(alias) != null;
         } catch (Exception e) {
             return false;
         }
@@ -152,7 +163,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public boolean engineIsKeyEntry(String alias) {
-        throw new UnsupportedOperationException();
+        List<String> aliases = vaultService.engineAliases();
+        return aliases.stream().anyMatch(vaultAlias -> vaultAlias.equalsIgnoreCase(alias));
     }
 
     /**
@@ -160,7 +172,24 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public boolean engineIsCertificateEntry(String alias) {
-        throw new UnsupportedOperationException();
+        return vaultService.getCertificateByAlias(alias) != null;
+    }
+
+    /**
+     * @should entry is certificate or entry is secret
+     */
+    @Override
+    public boolean engineEntryInstanceOf(String alias,
+                                         Class<? extends KeyStore.Entry> entryClass) {
+        if (entryClass == KeyStore.TrustedCertificateEntry.class) {
+            return engineIsCertificateEntry(alias);
+        }
+        if (entryClass == KeyStore.PrivateKeyEntry.class
+            || entryClass == KeyStore.SecretKeyEntry.class) {
+            return vaultService.getKeyByAlias(alias) != null
+                || vaultService.getSecretByAlias(alias) != null;
+        }
+        return false;
     }
 
     /**
@@ -176,7 +205,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public void engineStore(OutputStream stream, char[] password) {
-        throw new UnsupportedOperationException();
+        // Do nothing. Do not throw exceptions
     }
 
     @Override
