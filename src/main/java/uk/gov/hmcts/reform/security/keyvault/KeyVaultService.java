@@ -60,16 +60,20 @@ final class KeyVaultService {
     }
 
     KeyVaultService(KeyVaultConfig keyVaultConfig) {
-        this(keyVaultConfig, ((KeyVaultClientProvider) keyVaultConfig1 -> {
-                    if (StringUtils.isNoneEmpty(keyVaultConfig1.getVaultClientId(), keyVaultConfig1.getVaultClientKey())) {
-                        return new KeyVaultClient(new ClientSecretKeyVaultCredential(keyVaultConfig1.getVaultClientId(),
-                            keyVaultConfig1.getVaultClientKey()));
-                    } else if (StringUtils.isNotEmpty(keyVaultConfig1.getVaultMsiUrl())) {
-                        return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig1.getVaultMsiUrl(),
-                            keyVaultConfig1.getVaultErrorMaxRetries(), keyVaultConfig1.getVaultErrorRetryIntervalMillis()));
-                    }
-            throw new IllegalArgumentException("System properties do not define which KeyVaultClient to create");
-        }).getClient(keyVaultConfig));
+        this(keyVaultConfig, new KeyVaultClientProvider() {
+            @Override
+            public KeyVaultClient getClient(KeyVaultConfig keyVaultConfig) {
+                if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
+                    return new KeyVaultClient(new ClientSecretKeyVaultCredential(keyVaultConfig.getVaultClientId(),
+                        keyVaultConfig.getVaultClientKey()));
+                } else if (StringUtils.isNotEmpty(keyVaultConfig.getVaultMsiUrl())) {
+                    return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig.getVaultMsiUrl(),
+                        keyVaultConfig.getVaultErrorMaxRetries(), keyVaultConfig.getVaultErrorRetryIntervalMillis()));
+                }
+
+                throw new IllegalArgumentException("System properties do not define which KeyVaultClient to create");
+            }
+        }.getClient(keyVaultConfig));
     }
 
     KeyVaultService(KeyVaultConfig keyVaultConfig, KeyVaultClient vaultClient) {
