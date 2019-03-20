@@ -15,18 +15,21 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.security.Key;
 import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doAnswer;
 
 @RunWith(MockitoJUnitRunner.class)
 public class KeyVaultServiceTest {
@@ -160,12 +163,12 @@ public class KeyVaultServiceTest {
 
         doAnswer(invocation -> {
             Consumer<SecretItem> arg0 = invocation.getArgument(0);
-            secretItems.forEach(arg0::accept);
+            secretItems.forEach(arg0);
             return null;
         }).when(mockSecretPagedList).forEach(any(Consumer.class));
         doAnswer(invocation -> {
             Consumer<KeyItem> arg0 = invocation.getArgument(0);
-            keyItems.forEach(arg0::accept);
+            keyItems.forEach(arg0);
             return null;
         }).when(mockKeyPagedList).forEach(any(Consumer.class));
 
