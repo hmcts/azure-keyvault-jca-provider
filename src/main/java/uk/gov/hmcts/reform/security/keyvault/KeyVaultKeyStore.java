@@ -18,6 +18,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
@@ -34,6 +35,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Key engineGetKey(String alias, char[] password) {
+        if (alias.equalsIgnoreCase("sms-transport-key")
+            || alias.equalsIgnoreCase("sms.transport.key")) {
+            return getTransportKey("sms-transport-key");
+        }
+
         KeyBundle keyBundle = vaultService.getKeyByAlias(alias);
         if (keyBundle != null) {
             // Found a key-pair for this alias
@@ -52,6 +58,18 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
                     .SecretKeyEntry(new SecretKeySpec(bundle.value().getBytes(), "RAW"));
                 return entry.getSecretKey();
             }
+        }
+        return null;
+    }
+
+    private Key getTransportKey(String alias) {
+        SecretBundle bundle = vaultService.getSecretByAlias(alias);
+        if (bundle != null) {
+            // decode the base64 encoded string
+            byte[] decodedKey = Base64.getDecoder().decode(bundle.value());
+            KeyStore.SecretKeyEntry entry = new KeyStore
+                .SecretKeyEntry(new SecretKeySpec(decodedKey, "AES"));
+            return entry.getSecretKey();
         }
         return null;
     }
@@ -141,6 +159,9 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public boolean engineContainsAlias(String alias) {
+        if (alias.equalsIgnoreCase("sms.transport.key")) {
+            alias = "sms-transport-key";
+        }
         try {
             return vaultService.getKeyByAlias(alias) != null
                 || vaultService.getSecretByAlias(alias) != null
@@ -184,6 +205,9 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     @Override
     public boolean engineEntryInstanceOf(String alias,
                                          Class<? extends KeyStore.Entry> entryClass) {
+        if (alias.equalsIgnoreCase("sms.transport.key")) {
+            alias = "sms-transport-key";
+        }
         if (entryClass == KeyStore.TrustedCertificateEntry.class) {
             return engineIsCertificateEntry(alias);
         }

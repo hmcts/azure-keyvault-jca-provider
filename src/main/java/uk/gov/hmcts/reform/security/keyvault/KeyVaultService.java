@@ -150,6 +150,9 @@ final class KeyVaultService {
         if (parsedString.contains("/keys/")) {
             parsedString = parseUrlIDString(parsedString,"/keys/");
         }
+        if (parsedString.equalsIgnoreCase("sms-transport-key")) {
+            parsedString = "sms.transport.key";
+        }
         return parsedString;
     }
 
