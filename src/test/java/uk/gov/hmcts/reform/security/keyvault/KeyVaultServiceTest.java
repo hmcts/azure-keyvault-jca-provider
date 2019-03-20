@@ -25,6 +25,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
@@ -153,7 +154,8 @@ public class KeyVaultServiceTest {
      */
     @Test
     public void engineAliases_shouldCallDelegateAndReturnParsedList() {
-        List<SecretItem> secretItems = Arrays.asList(new SecretItem().withId("https://myvault.vault.azure.net/secrets/help/abc123xyz789"),
+        List<SecretItem> secretItems = Arrays.asList(new SecretItem().withId("https://myvault.vault.azure.net/secrets/sms-transport-key/xyzAbc123"),
+            new SecretItem().withId("https://myvault.vault.azure.net/secrets/help/abc123xyz789"),
             new SecretItem().withId("https://myvault.vault.azure.net/secrets/get-me/abc123xyz789"));
         List<KeyItem> keyItems = Arrays.asList(new KeyItem().withKid("https://myvault.vault.azure.net/keys/the-hell/abc123xyz789"),
             new KeyItem().withKid("https://myvault.vault.azure.net/keys/outta-here/abc123xyz789"));
@@ -176,7 +178,7 @@ public class KeyVaultServiceTest {
         given(this.vaultClient.listKeys(BASE_URL)).willReturn(mockKeyPagedList);
 
         List<String> listOfAliases = this.keyVaultService.engineAliases();
-        assertEquals(listOfAliases, Arrays.asList("help", "get-me", "the-hell", "outta-here"));
+        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "help", "get-me", "the-hell", "outta-here"));
     }
 
     /**
@@ -190,5 +192,19 @@ public class KeyVaultServiceTest {
         SecretBundle resultBundle = this.keyVaultService.deleteSecretByAlias(ALIAS);
         verify(vaultClient).deleteSecret(BASE_URL, ALIAS);
         assertEquals(resultBundle, secretBundle);
+    }
+
+    /**
+     * @verifies return null if certificate is missing
+     * @see KeyVaultService#getCertificateByAlias(String)
+     */
+    @Test
+    public void getCertificateByAlias_shouldReturnNullIfCertificateIsMissing() throws Exception {
+        given(vaultClient.getCertificate(BASE_URL, ALIAS)).willReturn(null);
+
+        CertificateBundle certificateBundle = keyVaultService.getCertificateByAlias(ALIAS);
+
+        verify(vaultClient).getCertificate(BASE_URL, ALIAS);
+        assertNull(certificateBundle);
     }
 }

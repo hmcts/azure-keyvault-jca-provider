@@ -33,6 +33,9 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should return rsa private key for rsa alias
      * @should throw provider exception for unsupported key type
      * @should fetch Secret Key if Key by Alias fails
+     * @should fetch sms-transport-key if called for sms.transport.key
+     * @should return null if no sms-transport-key exists when called with sms.transport.key
+     * @should return null if no keys are found
      */
     @Override
     public Key engineGetKey(String alias, char[] password) {
@@ -154,7 +157,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should return true when vault contains  certificate with the required alias
+     * @should change alias to sms-transport-key when it's sms.transport.key
+     * @should return false when exception is thrown
      * @should return true when vault contains a key with the required alias
      * @should return false when vault does not contain the alias
      */
@@ -202,6 +206,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     /**
      * @should return entry is certificate or entry is secret
      * @should return false if entry isn't in keyvault
+     * @should change alias to sms-transport-key when it's sms.transport.key
+     * @should return false if class is not supported
      */
     @Override
     public boolean engineEntryInstanceOf(String alias,

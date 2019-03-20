@@ -186,6 +186,7 @@ final class KeyVaultService {
 
     /**
      * @should call delegate
+     * @should return null if certificate is missing
      */
     CertificateBundle getCertificateByAlias(String alias) {
         return getFromCacheOrNull(certificateByAliasCache::getUnchecked, alias);

@@ -37,6 +37,8 @@ public class KeyVaultKeyStoreTest {
 
     private static final String ALIAS = "alias";
 
+    private static final String DUMMY_KEY_BASE_64 = "vOX5qWDltjg1GiIrNtgo4g==";
+
     private static final String KEY_IDENTIFIER = "https://myvault.vault.azure.net/keys/my-key/abc123xyz789";
 
     private static final String DUMMY_CERT_BASE_64 =
@@ -205,8 +207,7 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineContainsAlias(String)
      */
     @Test
-    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsAKeyWithTheRequiredAlias()
-        throws Exception {
+    public void engineContainsAlias_shouldReturnTrueWhenVaultContainsAKeyWithTheRequiredAlias() {
         KeyBundle keyBundle = mock(KeyBundle.class);
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(keyBundle);
 
@@ -308,7 +309,7 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineIsCertificateEntry(String)
      */
     @Test
-    public void engineIsCertificateEntry_shouldReturnTrueIfCertificateIsInKeyvault() throws Exception {
+    public void engineIsCertificateEntry_shouldReturnTrueIfCertificateIsInKeyvault() {
         CertificateBundle certificateBundle = mock(CertificateBundle.class);
         given(vaultService.getCertificateByAlias(ALIAS)).willReturn(certificateBundle);
         assertTrue(keyStore.engineIsCertificateEntry(ALIAS));
@@ -332,8 +333,103 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineIsCertificateEntry(String)
      */
     @Test
-    public void engineIsCertificateEntry_shouldReturnFalseIfCertificateIsntInKeyvault() throws Exception {
+    public void engineIsCertificateEntry_shouldReturnFalseIfCertificateIsntInKeyvault() {
         given(vaultService.getCertificateByAlias(ALIAS)).willReturn(null);
         assertFalse(keyStore.engineIsCertificateEntry(ALIAS));
+    }
+
+    /**
+     * @verifies fetch sms-transport-key if called for sms.transport.key
+     * @see KeyVaultKeyStore#engineGetKey(String, char[])
+     */
+    @Test
+    public void engineGetKey_shouldFetchSmstransportkeyIfCalledForSmstransportkey() {
+        char[] password = "password".toCharArray();
+        SecretBundle keyBundle = new SecretBundle().withValue(DUMMY_KEY_BASE_64);
+        given(vaultService.getSecretByAlias(eq("sms-transport-key"))).willReturn(keyBundle);
+
+        SecretKey key = (SecretKey)keyStore.engineGetKey("sms.transport.key", password);
+
+        verify(vaultService).getSecretByAlias(eq("sms-transport-key"));
+
+        assertTrue(Base64.getEncoder()
+            .encodeToString(key.getEncoded())
+            .equalsIgnoreCase(DUMMY_KEY_BASE_64));
+    }
+
+    /**
+     * @verifies return null if no keys are found
+     * @see KeyVaultKeyStore#engineGetKey(String, char[])
+     */
+    @Test
+    public void engineGetKey_shouldReturnNullIfNoKeysAreFound() {
+        char[] password = "password".toCharArray();
+        given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(null);
+        given(vaultService.getSecretByAlias(eq(ALIAS))).willReturn(null);
+
+        Key key = keyStore.engineGetKey(ALIAS, password);
+
+        verify(vaultService).getKeyByAlias(eq(ALIAS));
+        verify(vaultService).getSecretByAlias(eq(ALIAS));
+
+        assertNull(key);
+    }
+
+    /**
+     * @verifies return null if no sms-transport-key exists when called with sms.transport.key
+     * @see KeyVaultKeyStore#engineGetKey(String, char[])
+     */
+    @Test
+    public void engineGetKey_shouldReturnNullIfNoSmstransportkeyExistsWhenCalledWithSmstransportkey() {
+        char[] password = "password".toCharArray();
+        given(vaultService.getSecretByAlias(eq("sms-transport-key"))).willReturn(null);
+
+        SecretKey key = (SecretKey)keyStore.engineGetKey("sms.transport.key", password);
+
+        verify(vaultService).getSecretByAlias(eq("sms-transport-key"));
+
+        assertNull(key);
+    }
+
+    /**
+     * @verifies return false when exception is thrown
+     * @see KeyVaultKeyStore#engineContainsAlias(String)
+     */
+    @Test
+    public void engineContainsAlias_shouldReturnFalseWhenExceptionIsThrown() {
+        given(vaultService.getKeyByAlias(eq(ALIAS))).willThrow(new NullPointerException());
+        assertFalse(keyStore.engineContainsAlias(ALIAS));
+    }
+
+    /**
+     * @verifies change alias to sms-transport-key when it's sms.transport.key
+     * @see KeyVaultKeyStore#engineContainsAlias(String)
+     */
+    @Test
+    public void engineContainsAlias_shouldChangeAliasToSmstransportkeyWhenItsSmstransportkey() {
+        KeyBundle keyBundle = mock(KeyBundle.class);
+        given(vaultService.getKeyByAlias(eq("sms-transport-key"))).willReturn(keyBundle);
+        assertTrue(keyStore.engineContainsAlias("sms.transport.key"));
+    }
+
+    /**
+     * @verifies change alias to sms-transport-key when it's sms.transport.key
+     * @see KeyVaultKeyStore#engineEntryInstanceOf(String, Class)
+     */
+    @Test
+    public void engineEntryInstanceOf_shouldChangeAliasToSmstransportkeyWhenItsSmstransportkey() {
+        KeyBundle keyBundle = mock(KeyBundle.class);
+        given(vaultService.getKeyByAlias("sms-transport-key")).willReturn(keyBundle);
+        assertTrue(keyStore.engineEntryInstanceOf("sms.transport.key", KeyStore.PrivateKeyEntry.class));
+        assertTrue(keyStore.engineEntryInstanceOf("sms.transport.key", KeyStore.SecretKeyEntry.class));
+    }
+
+    /**
+     * @verifies return false if class is not supported
+     * @see KeyVaultKeyStore#engineEntryInstanceOf(String, Class)
+     */
+    @Test
+    public void engineEntryInstanceOf_shouldReturnFalseIfClassIsNotSupported() {
+        assertFalse(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.Entry.class));
     }
 }
