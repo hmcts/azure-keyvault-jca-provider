@@ -20,12 +20,13 @@ import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
 import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
 import uk.gov.hmcts.reform.vault.credential.ClientSecretKeyVaultCredential;
 
-import javax.crypto.SecretKey;
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+
+import javax.crypto.SecretKey;
 
 final class KeyVaultService {
     private static volatile KeyVaultService INSTANCE;
@@ -67,7 +68,6 @@ final class KeyVaultService {
                 return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig1.getVaultMsiUrl(),
                     keyVaultConfig1.getVaultErrorMaxRetries(), keyVaultConfig1.getVaultErrorRetryIntervalMillis()));
             }
-
             throw new IllegalArgumentException("System properties do not define which KeyVaultClient to create");
         }).getClient(keyVaultConfig));
     }
@@ -145,10 +145,10 @@ final class KeyVaultService {
     private String parseAzureAliasString(String id) {
         String parsedString = id;
         if (parsedString.contains("/secrets/")) {
-            parsedString = parseUrlIDString(parsedString,"/secrets/");
+            parsedString = parseUrlIDString(parsedString, "/secrets/");
         }
         if (parsedString.contains("/keys/")) {
-            parsedString = parseUrlIDString(parsedString,"/keys/");
+            parsedString = parseUrlIDString(parsedString, "/keys/");
         }
         if (parsedString.equalsIgnoreCase("sms-transport-key")) {
             parsedString = "sms.transport.key";
