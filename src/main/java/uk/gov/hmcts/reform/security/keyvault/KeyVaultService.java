@@ -23,6 +23,8 @@ import uk.gov.hmcts.reform.vault.credential.ClientSecretKeyVaultCredential;
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -42,6 +44,8 @@ final class KeyVaultService {
     private final LoadingCache<String, KeyBundle> keyByIdentifierCache;
 
     private final LoadingCache<String, CertificateBundle> certificateByAliasCache;
+
+    private final Map<String, String> vaultKeyToRequestKeyMappings;
 
     public static KeyVaultService getInstance() {
         if (INSTANCE == null) {
@@ -79,6 +83,7 @@ final class KeyVaultService {
     KeyVaultService(KeyVaultConfig keyVaultConfig, KeyVaultClient vaultClient) {
         this.vaultClient = vaultClient;
         this.baseUrl = keyVaultConfig.getVaultBaseUrl();
+        this.vaultKeyToRequestKeyMappings = new ConcurrentHashMap<>();
 
         secretByAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
@@ -154,8 +159,8 @@ final class KeyVaultService {
         if (parsedString.contains("/keys/")) {
             parsedString = parseUrlIDString(parsedString, "/keys/");
         }
-        if (parsedString.equalsIgnoreCase("sms-transport-key")) {
-            parsedString = "sms.transport.key";
+        if (vaultKeyToRequestKeyMappings.containsKey(parsedString)) {
+            parsedString = vaultKeyToRequestKeyMappings.get(parsedString);
         }
         return parsedString;
     }
@@ -190,6 +195,14 @@ final class KeyVaultService {
      */
     CertificateBundle getCertificateByAlias(String alias) {
         return getFromCacheOrNull(certificateByAliasCache::getUnchecked, alias);
+    }
+
+    /**
+     * @param vaultKey The name of the Key in Vault
+     * @param requestedKey The name of the Key requested by App
+     */
+    public void mapVaultKeyToRequestedKey(String vaultKey, String requestedKey) {
+        this.vaultKeyToRequestKeyMappings.put(vaultKey, requestedKey);
     }
 
     private <T> T getFromCacheOrNull(Function<String, T> cacheGet, String key) {

@@ -163,6 +163,8 @@ public class KeyVaultServiceTest {
         PagedList<SecretItem> mockSecretPagedList = mock(PagedList.class);
         PagedList<KeyItem> mockKeyPagedList = mock(PagedList.class);
 
+        keyVaultService.mapVaultKeyToRequestedKey("sms-transport-key", "sms.transport.key");
+
         doAnswer(invocation -> {
             Consumer<SecretItem> arg0 = invocation.getArgument(0);
             secretItems.forEach(arg0);

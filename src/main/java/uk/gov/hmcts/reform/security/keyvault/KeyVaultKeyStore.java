@@ -27,6 +27,10 @@ import javax.crypto.spec.SecretKeySpec;
 
 public final class KeyVaultKeyStore extends KeyStoreSpi {
 
+    private static final String SMS_TRANSPORT_KEY_DASHES = "sms-transport-key";
+
+    private static final String SMS_TRANSPORT_KEY_DOTS = "sms.transport.key";
+
     private KeyVaultService vaultService;
 
     /**
@@ -39,9 +43,9 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Key engineGetKey(String alias, char[] password) {
-        if (alias.equalsIgnoreCase("sms-transport-key")
-            || alias.equalsIgnoreCase("sms.transport.key")) {
-            return getTransportKey("sms-transport-key");
+        if (alias.equalsIgnoreCase(SMS_TRANSPORT_KEY_DASHES)
+            || alias.equalsIgnoreCase(SMS_TRANSPORT_KEY_DOTS)) {
+            return getSmsTransportKey();
         }
 
         KeyBundle keyBundle = vaultService.getKeyByAlias(alias);
@@ -66,8 +70,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
         return null;
     }
 
-    private Key getTransportKey(String alias) {
-        SecretBundle bundle = vaultService.getSecretByAlias(alias);
+    private Key getSmsTransportKey() {
+        SecretBundle bundle = vaultService.getSecretByAlias(SMS_TRANSPORT_KEY_DASHES);
         if (bundle != null) {
             // decode the base64 encoded string
             byte[] decodedKey = Base64.getDecoder().decode(bundle.value());
@@ -92,6 +96,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Certificate engineGetCertificate(String alias) {
+        alias = replaceDotsWithDashes(alias);
         CertificateBundle certificateBundle = vaultService.getCertificateByAlias(alias);
         if (certificateBundle == null) {
             return null;
@@ -121,6 +126,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public void engineSetKeyEntry(String alias, Key key, char[] password, Certificate[] chain) {
+        alias = replaceDotsWithDashes(alias);
         vaultService.setKeyByAlias(alias, key);
     }
 
@@ -145,10 +151,13 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public void engineDeleteEntry(String alias) {
+        alias = replaceDotsWithDashes(alias);
         vaultService.deleteSecretByAlias(alias);
     }
 
     /**
+     * Dots replaced with dashes will come back as dots in this list
+     *
      * @should return an empty enumeration
      */
     @Override
@@ -164,9 +173,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public boolean engineContainsAlias(String alias) {
-        if (alias.equalsIgnoreCase("sms.transport.key")) {
-            alias = "sms-transport-key";
-        }
+        alias = replaceDotsWithDashes(alias);
         try {
             return vaultService.getKeyByAlias(alias) != null
                 || vaultService.getSecretByAlias(alias) != null
@@ -185,6 +192,10 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
+     *
+     * DO NOT REPLACE DOTS WITH DASHES IN THIS METHOD
+     * KeyVaultService.engineAliases will replace them
+     *
      * @should return true if alias is within list
      * @should return false if alias is not within list
      */
@@ -200,6 +211,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public boolean engineIsCertificateEntry(String alias) {
+        alias = replaceDotsWithDashes(alias);
         return vaultService.getCertificateByAlias(alias) != null;
     }
 
@@ -212,9 +224,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     @Override
     public boolean engineEntryInstanceOf(String alias,
                                          Class<? extends KeyStore.Entry> entryClass) {
-        if (alias.equalsIgnoreCase("sms.transport.key")) {
-            alias = "sms-transport-key";
-        }
+        alias = replaceDotsWithDashes(alias);
         if (entryClass == KeyStore.TrustedCertificateEntry.class) {
             return engineIsCertificateEntry(alias);
         }
@@ -224,6 +234,15 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
                 || vaultService.getSecretByAlias(alias) != null;
         }
         return false;
+    }
+
+    private String replaceDotsWithDashes(String alias) {
+        if (alias.contains(".")) {
+            String dots = alias;
+            alias = alias.replace(".", "-");
+            this.vaultService.mapVaultKeyToRequestedKey(alias, dots);
+        }
+        return alias;
     }
 
     /**
