@@ -192,7 +192,6 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     *
      * DO NOT REPLACE DOTS WITH DASHES IN THIS METHOD
      * KeyVaultService.engineAliases will replace them
      *
