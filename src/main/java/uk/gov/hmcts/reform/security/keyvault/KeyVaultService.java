@@ -114,6 +114,7 @@ final class KeyVaultService {
      * @should call delegate
      */
     KeyBundle getKeyByAlias(String alias) {
+        alias = replaceDotsWithDashes(alias);
         return getFromCacheOrNull(keyByAliasCache::getUnchecked, alias);
     }
 
@@ -121,6 +122,7 @@ final class KeyVaultService {
      * @should call delegate
      */
     SecretBundle getSecretByAlias(String alias) {
+        alias = replaceDotsWithDashes(alias);
         return getFromCacheOrNull(secretByAliasCache::getUnchecked, alias);
     }
 
@@ -129,6 +131,7 @@ final class KeyVaultService {
      * @should throw exception if key is unsupported
      */
     public SecretBundle setKeyByAlias(String alias, Key key) {
+        alias = replaceDotsWithDashes(alias);
         if (key instanceof SecretKey) {
             JsonWebKey jsonWebKey = JsonWebKey.fromAes((SecretKey) key);
             SetSecretRequest secretRequest = new SetSecretRequest
@@ -165,6 +168,15 @@ final class KeyVaultService {
         return parsedString;
     }
 
+    private String replaceDotsWithDashes(String alias) {
+        if (alias.contains(".")) {
+            String dots = alias;
+            alias = alias.replace(".", "-");
+            this.mapVaultKeyToRequestedKey(alias, dots);
+        }
+        return alias;
+    }
+
     private String parseUrlIDString(String stringToParse, String pathOfID) {
         String parsedString = stringToParse;
         parsedString = parsedString.substring(parsedString.indexOf(pathOfID) + pathOfID.length());
@@ -178,6 +190,7 @@ final class KeyVaultService {
      * @should call delegate
      */
     public SecretBundle deleteSecretByAlias(String alias) {
+        alias = replaceDotsWithDashes(alias);
         this.secretByAliasCache.invalidate(alias);
         return this.vaultClient.deleteSecret(baseUrl, alias);
     }
@@ -194,6 +207,7 @@ final class KeyVaultService {
      * @should return null if certificate is missing
      */
     CertificateBundle getCertificateByAlias(String alias) {
+        alias = replaceDotsWithDashes(alias);
         return getFromCacheOrNull(certificateByAliasCache::getUnchecked, alias);
     }
 

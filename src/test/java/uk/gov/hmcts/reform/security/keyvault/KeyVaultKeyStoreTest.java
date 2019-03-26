@@ -402,29 +402,6 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies change alias to sms-transport-key when it's sms.transport.key
-     * @see KeyVaultKeyStore#engineContainsAlias(String)
-     */
-    @Test
-    public void engineContainsAlias_shouldChangeAliasToSmstransportkeyWhenItsSmstransportkey() {
-        KeyBundle keyBundle = mock(KeyBundle.class);
-        given(vaultService.getKeyByAlias(eq("sms-transport-key"))).willReturn(keyBundle);
-        assertTrue(keyStore.engineContainsAlias("sms.transport.key"));
-    }
-
-    /**
-     * @verifies change alias to sms-transport-key when it's sms.transport.key
-     * @see KeyVaultKeyStore#engineEntryInstanceOf(String, Class)
-     */
-    @Test
-    public void engineEntryInstanceOf_shouldChangeAliasToSmstransportkeyWhenItsSmstransportkey() {
-        KeyBundle keyBundle = mock(KeyBundle.class);
-        given(vaultService.getKeyByAlias("sms-transport-key")).willReturn(keyBundle);
-        assertTrue(keyStore.engineEntryInstanceOf("sms.transport.key", KeyStore.PrivateKeyEntry.class));
-        assertTrue(keyStore.engineEntryInstanceOf("sms.transport.key", KeyStore.SecretKeyEntry.class));
-    }
-
-    /**
      * @verifies return false if class is not supported
      * @see KeyVaultKeyStore#engineEntryInstanceOf(String, Class)
      */
