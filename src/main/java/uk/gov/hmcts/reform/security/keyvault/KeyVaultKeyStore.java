@@ -17,6 +17,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -75,6 +76,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
         if (bundle != null) {
             // decode the base64 encoded string
             byte[] decodedKey = Base64.getDecoder().decode(bundle.value());
+            // use only first 128 bit
+            decodedKey = Arrays.copyOf(decodedKey, 16);
             KeyStore.SecretKeyEntry entry = new KeyStore
                 .SecretKeyEntry(new SecretKeySpec(decodedKey, "AES"));
             return entry.getSecretKey();
