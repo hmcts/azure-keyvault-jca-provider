@@ -10,7 +10,7 @@ import com.microsoft.azure.keyvault.models.SecretBundle;
 import com.microsoft.azure.keyvault.models.SecretItem;
 import com.microsoft.azure.keyvault.requests.SetSecretRequest;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
-import org.junit.Assert;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -159,20 +159,18 @@ public class KeyVaultServiceTest {
         List<SecretItem> secretItems = Arrays.asList(new SecretItem().withId("https://myvault.vault.azure.net/secrets/sms-transport-key/xyzAbc123"),
             new SecretItem().withId("https://myvault.vault.azure.net/secrets/help/abc123xyz789"),
             new SecretItem().withId("https://myvault.vault.azure.net/secrets/get-me/abc123xyz789"));
-        List<KeyItem> keyItems = Arrays.asList(new KeyItem().withKid("https://myvault.vault.azure.net/keys/the-hell/abc123xyz789"),
-            new KeyItem().withKid("https://myvault.vault.azure.net/keys/outta-here/abc123xyz789"));
-
         PagedList<SecretItem> mockSecretPagedList = mock(PagedList.class);
-        PagedList<KeyItem> mockKeyPagedList = mock(PagedList.class);
-
-        given(this.vaultClient.getSecret(BASE_URL, "sms-transport-key")).willReturn(null);
-        this.keyVaultService.getSecretByAlias("sms.transport.key");
 
         doAnswer(invocation -> {
             Consumer<SecretItem> arg0 = invocation.getArgument(0);
             secretItems.forEach(arg0);
             return null;
         }).when(mockSecretPagedList).forEach(any(Consumer.class));
+
+        List<KeyItem> keyItems = Arrays.asList(new KeyItem().withKid("https://myvault.vault.azure.net/keys/the-hell/abc123xyz789"),
+            new KeyItem().withKid("https://myvault.vault.azure.net/keys/outta-here/abc123xyz789"));
+        PagedList<KeyItem> mockKeyPagedList = mock(PagedList.class);
+
         doAnswer(invocation -> {
             Consumer<KeyItem> arg0 = invocation.getArgument(0);
             keyItems.forEach(arg0);
@@ -181,6 +179,9 @@ public class KeyVaultServiceTest {
 
         given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
         given(this.vaultClient.listKeys(BASE_URL)).willReturn(mockKeyPagedList);
+        given(this.vaultClient.getSecret(BASE_URL, "sms-transport-key")).willReturn(null);
+
+        this.keyVaultService.getSecretByAlias("sms.transport.key");
 
         List<String> listOfAliases = this.keyVaultService.engineKeyAliases();
         assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "help", "get-me", "the-hell", "outta-here"));
