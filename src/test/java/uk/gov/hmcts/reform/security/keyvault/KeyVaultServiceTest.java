@@ -3,12 +3,14 @@ package uk.gov.hmcts.reform.security.keyvault;
 import com.microsoft.azure.PagedList;
 import com.microsoft.azure.keyvault.KeyVaultClient;
 import com.microsoft.azure.keyvault.models.CertificateBundle;
+import com.microsoft.azure.keyvault.models.CertificateItem;
 import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.KeyItem;
 import com.microsoft.azure.keyvault.models.SecretBundle;
 import com.microsoft.azure.keyvault.models.SecretItem;
 import com.microsoft.azure.keyvault.requests.SetSecretRequest;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -150,10 +152,10 @@ public class KeyVaultServiceTest {
 
     /**
      * @verifies call delegate and return parsed list
-     * @see KeyVaultService#engineAliases()
+     * @see KeyVaultService#engineKeyAliases()
      */
     @Test
-    public void engineAliases_shouldCallDelegateAndReturnParsedList() {
+    public void engineKeyAliases_shouldCallDelegateAndReturnParsedList() {
         List<SecretItem> secretItems = Arrays.asList(new SecretItem().withId("https://myvault.vault.azure.net/secrets/sms-transport-key/xyzAbc123"),
             new SecretItem().withId("https://myvault.vault.azure.net/secrets/help/abc123xyz789"),
             new SecretItem().withId("https://myvault.vault.azure.net/secrets/get-me/abc123xyz789"));
@@ -163,7 +165,8 @@ public class KeyVaultServiceTest {
         PagedList<SecretItem> mockSecretPagedList = mock(PagedList.class);
         PagedList<KeyItem> mockKeyPagedList = mock(PagedList.class);
 
-        keyVaultService.mapVaultKeyToRequestedKey("sms-transport-key", "sms.transport.key");
+        given(this.vaultClient.getSecret(BASE_URL, "sms-transport-key")).willReturn(null);
+        this.keyVaultService.getSecretByAlias("sms.transport.key");
 
         doAnswer(invocation -> {
             Consumer<SecretItem> arg0 = invocation.getArgument(0);
@@ -179,7 +182,7 @@ public class KeyVaultServiceTest {
         given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
         given(this.vaultClient.listKeys(BASE_URL)).willReturn(mockKeyPagedList);
 
-        List<String> listOfAliases = this.keyVaultService.engineAliases();
+        List<String> listOfAliases = this.keyVaultService.engineKeyAliases();
         assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "help", "get-me", "the-hell", "outta-here"));
     }
 
@@ -208,5 +211,34 @@ public class KeyVaultServiceTest {
 
         verify(vaultClient).getCertificate(BASE_URL, ALIAS);
         assertNull(certificateBundle);
+    }
+
+    /**
+     * @verifies call delegate and return parsed list
+     * @see KeyVaultService#engineCertificateAliases()
+     */
+    @Test
+    public void engineCertificateAliases_shouldCallDelegateAndReturnParsedList() {
+        List<CertificateItem> certificateItems = Arrays.asList(
+            new CertificateItem().withId("https://myvault.vault.azure.net/certificates/sms-transport-key/xyzAbc123"),
+            new CertificateItem().withId("https://myvault.vault.azure.net/certificates/key1/abc123xyz789"),
+            new CertificateItem().withId("https://myvault.vault.azure.net/certificates/key2/abc123xyz789")
+        );
+
+        PagedList<CertificateItem> mockCertificatePageList = mock(PagedList.class);
+
+        given(this.vaultClient.getSecret(BASE_URL, "sms-transport-key")).willReturn(null);
+        this.keyVaultService.getSecretByAlias("sms.transport.key");
+
+        doAnswer(invocation -> {
+            Consumer<CertificateItem> arg0 = invocation.getArgument(0);
+            certificateItems.forEach(arg0);
+            return null;
+        }).when(mockCertificatePageList).forEach(any(Consumer.class));
+
+        given(this.vaultClient.listCertificates(BASE_URL)).willReturn(mockCertificatePageList);
+
+        List<String> listOfAliases = this.keyVaultService.engineCertificateAliases();
+        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "key1", "key2"));
     }
 }

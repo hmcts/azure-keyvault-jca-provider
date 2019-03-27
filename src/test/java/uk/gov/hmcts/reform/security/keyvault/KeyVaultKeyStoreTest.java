@@ -180,11 +180,11 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies return an empty enumeration
+     * @verifies return an enumeration
      * @see KeyVaultKeyStore#engineAliases()
      */
     @Test
-    public void engineAliases_shouldReturnAnEmptyEnumeration() {
+    public void engineAliases_shouldReturnAnEnumeration() {
         Enumeration<String> enumeration = keyStore.engineAliases();
         assertFalse(enumeration.hasMoreElements());
     }
@@ -250,7 +250,7 @@ public class KeyVaultKeyStoreTest {
      */
     @Test
     public void engineIsKeyEntry_shouldReturnTrueIfAliasIsWithinList() {
-        given(vaultService.engineAliases()).willReturn(Collections.singletonList(ALIAS));
+        given(vaultService.engineKeyAliases()).willReturn(Collections.singletonList(ALIAS));
         assertTrue(keyStore.engineIsKeyEntry(ALIAS));
     }
 
@@ -260,7 +260,7 @@ public class KeyVaultKeyStoreTest {
      */
     @Test
     public void engineIsKeyEntry_shouldReturnFalseIfAliasIsNotWithinList() {
-        given(vaultService.engineAliases()).willReturn(Collections.EMPTY_LIST);
+        given(vaultService.engineKeyAliases()).willReturn(Collections.EMPTY_LIST);
         assertFalse(keyStore.engineIsKeyEntry(ALIAS));
     }
 

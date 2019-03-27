@@ -158,11 +158,13 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     /**
      * Dots replaced with dashes will come back as dots in this list
      *
-     * @should return an empty enumeration
+     * @should return an enumeration
      */
     @Override
     public Enumeration<String> engineAliases() {
-        return Collections.enumeration(vaultService.engineAliases());
+        List<String> allAliases = vaultService.engineKeyAliases();
+        allAliases.addAll(vaultService.engineCertificateAliases());
+        return Collections.enumeration(allAliases);
     }
 
     /**
@@ -190,15 +192,14 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * DO NOT REPLACE DOTS WITH DASHES IN THIS METHOD
-     * KeyVaultService.engineAliases will replace them
+     * Does Key Exist in Key Store
      *
      * @should return true if alias is within list
      * @should return false if alias is not within list
      */
     @Override
     public boolean engineIsKeyEntry(String alias) {
-        List<String> aliases = vaultService.engineAliases();
+        List<String> aliases = vaultService.engineKeyAliases();
         return aliases.stream().anyMatch(vaultAlias -> vaultAlias.equalsIgnoreCase(alias));
     }
 

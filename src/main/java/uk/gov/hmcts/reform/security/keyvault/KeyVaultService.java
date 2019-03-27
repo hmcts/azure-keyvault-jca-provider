@@ -6,6 +6,7 @@ import com.google.common.cache.LoadingCache;
 import com.microsoft.azure.PagedList;
 import com.microsoft.azure.keyvault.KeyVaultClient;
 import com.microsoft.azure.keyvault.models.CertificateBundle;
+import com.microsoft.azure.keyvault.models.CertificateItem;
 import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.KeyItem;
 import com.microsoft.azure.keyvault.models.KeyOperationResult;
@@ -145,12 +146,30 @@ final class KeyVaultService {
     /**
      * @should call delegate and return parsed list
      */
-    public List<String> engineAliases() {
+    public List<String> engineKeyAliases() {
         List<String> allKeys = new ArrayList<>();
+
         PagedList<SecretItem> secretItems = this.vaultClient.listSecrets(baseUrl);
+        secretItems.loadAll();
         secretItems.forEach(item -> allKeys.add(parseAzureAliasString(item.id())));
+
         PagedList<KeyItem> keyItems = this.vaultClient.listKeys(baseUrl);
+        keyItems.loadAll();
         keyItems.forEach(item -> allKeys.add(parseAzureAliasString(item.kid())));
+
+        return allKeys;
+    }
+
+    /**
+     * @should call delegate and return parsed list
+     */
+    public List<String> engineCertificateAliases() {
+        List<String> allKeys = new ArrayList<>();
+
+        PagedList<CertificateItem> certificateItems = this.vaultClient.listCertificates(baseUrl);
+        certificateItems.loadAll();
+        certificateItems.forEach(item -> allKeys.add(parseAzureAliasString(item.id())));
+
         return allKeys;
     }
 
@@ -162,8 +181,20 @@ final class KeyVaultService {
         if (parsedString.contains("/keys/")) {
             parsedString = parseUrlIDString(parsedString, "/keys/");
         }
+        if (parsedString.contains("/certificates/")) {
+            parsedString = parseUrlIDString(parsedString, "/certificates/");
+        }
         if (vaultKeyToRequestKeyMappings.containsKey(parsedString)) {
             parsedString = vaultKeyToRequestKeyMappings.get(parsedString);
+        }
+        return parsedString;
+    }
+
+    private String parseUrlIDString(String stringToParse, String pathOfID) {
+        String parsedString = stringToParse;
+        parsedString = parsedString.substring(parsedString.indexOf(pathOfID) + pathOfID.length());
+        if (parsedString.contains("/")) {
+            parsedString = parsedString.substring(0, parsedString.indexOf("/"));
         }
         return parsedString;
     }
@@ -175,15 +206,6 @@ final class KeyVaultService {
             this.mapVaultKeyToRequestedKey(alias, dots);
         }
         return alias;
-    }
-
-    private String parseUrlIDString(String stringToParse, String pathOfID) {
-        String parsedString = stringToParse;
-        parsedString = parsedString.substring(parsedString.indexOf(pathOfID) + pathOfID.length());
-        if (parsedString.contains("/")) {
-            parsedString = parsedString.substring(0, parsedString.indexOf("/"));
-        }
-        return parsedString;
     }
 
     /**
@@ -211,11 +233,7 @@ final class KeyVaultService {
         return getFromCacheOrNull(certificateByAliasCache::getUnchecked, alias);
     }
 
-    /**
-     * @param vaultKey The name of the Key in Vault
-     * @param requestedKey The name of the Key requested by App
-     */
-    public void mapVaultKeyToRequestedKey(String vaultKey, String requestedKey) {
+    private void mapVaultKeyToRequestedKey(String vaultKey, String requestedKey) {
         this.vaultKeyToRequestKeyMappings.put(vaultKey, requestedKey);
     }
 
