@@ -46,6 +46,10 @@ final class KeyVaultService {
 
     private final LoadingCache<String, CertificateBundle> certificateByAliasCache;
 
+    private final LoadingCache<Object, List<String>> keyAliasCache;
+
+    private final LoadingCache<Object, List<String>> certificateAliasCache;
+
     private final Map<String, String> vaultKeyToRequestKeyMappings;
 
     public static KeyVaultService getInstance() {
@@ -105,6 +109,16 @@ final class KeyVaultService {
             .expireAfterWrite(24, TimeUnit.HOURS)
             .build(CacheLoader
                 .from((String alias) -> vaultClient.getCertificate(baseUrl, alias)));
+
+        keyAliasCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(24, TimeUnit.HOURS)
+            .build(CacheLoader
+                .from(this::callVaultForKeyAliases));
+
+        certificateAliasCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(24, TimeUnit.HOURS)
+            .build(CacheLoader
+                .from(this::callKeyVaultForCertificateAliases));
     }
 
     protected KeyVaultClient getClient() {
@@ -147,6 +161,10 @@ final class KeyVaultService {
      * @should call delegate and return parsed list
      */
     public List<String> engineKeyAliases() {
+        return getFromCacheOrNull(keyAliasCache::getUnchecked, "all");
+    }
+
+    private List<String> callVaultForKeyAliases() {
         List<String> allKeys = new ArrayList<>();
 
         PagedList<SecretItem> secretItems = this.vaultClient.listSecrets(baseUrl);
@@ -164,6 +182,10 @@ final class KeyVaultService {
      * @should call delegate and return parsed list
      */
     public List<String> engineCertificateAliases() {
+        return getFromCacheOrNull(certificateAliasCache::getUnchecked, "all");
+    }
+
+    private List<String> callKeyVaultForCertificateAliases() {
         List<String> allKeys = new ArrayList<>();
 
         PagedList<CertificateItem> certificateItems = this.vaultClient.listCertificates(baseUrl);
