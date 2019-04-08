@@ -157,6 +157,7 @@ public class KeyVaultServiceTest {
     @Test
     public void engineKeyAliases_shouldCallDelegateAndReturnParsedList() {
         List<SecretItem> secretItems = Arrays.asList(new SecretItem().withId("https://myvault.vault.azure.net/secrets/sms-transport-key/xyzAbc123"),
+            new SecretItem().withId("https://myvault.vault.azure.net/secrets/some-other-key/xyzAbc123"),
             new SecretItem().withId("https://myvault.vault.azure.net/secrets/help/abc123xyz789"),
             new SecretItem().withId("https://myvault.vault.azure.net/secrets/get-me/abc123xyz789"));
         PagedList<SecretItem> mockSecretPagedList = mock(PagedList.class);
@@ -197,15 +198,15 @@ public class KeyVaultServiceTest {
         given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
         given(this.vaultClient.listCertificates(BASE_URL)).willReturn(mockCertificatePageList);
         given(this.vaultClient.listKeys(BASE_URL)).willReturn(mockKeyPagedList);
-        given(this.vaultClient.getSecret(BASE_URL, "sms-transport-key")).willReturn(null);
+        given(this.vaultClient.getSecret(BASE_URL, "some-other-key")).willReturn(null);
 
         List<String> listOfAliases = this.keyVaultService.engineKeyAliases();
-        assertEquals(listOfAliases, Arrays.asList("sms-transport-key", "help", "get-me", "the-hell", "outta-here"));
+        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some-other-key", "help", "get-me", "the-hell", "outta-here"));
 
-        this.keyVaultService.getSecretByAlias("sms.transport.key");
+        this.keyVaultService.getSecretByAlias("some.other.key");
 
         listOfAliases = this.keyVaultService.engineKeyAliases();
-        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "help", "get-me", "the-hell", "outta-here"));
+        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some.other.key", "help", "get-me", "the-hell", "outta-here"));
     }
 
     /**

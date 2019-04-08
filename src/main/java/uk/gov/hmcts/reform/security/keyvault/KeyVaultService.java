@@ -52,6 +52,10 @@ final class KeyVaultService {
 
     private final Map<String, String> vaultKeyToRequestKeyMappings;
 
+    private static final String SMS_TRANSPORT_KEY_DASHES = "sms-transport-key";
+
+    private static final String SMS_TRANSPORT_KEY_DOTS = "sms.transport.key";
+
     public static KeyVaultService getInstance() {
         if (INSTANCE == null) {
             synchronized (KeyVaultService.class) {
@@ -87,8 +91,12 @@ final class KeyVaultService {
 
     KeyVaultService(KeyVaultConfig keyVaultConfig, KeyVaultClient vaultClient) {
         this.vaultClient = vaultClient;
+
         this.baseUrl = keyVaultConfig.getVaultBaseUrl();
+
         this.vaultKeyToRequestKeyMappings = new ConcurrentHashMap<>();
+
+        this.vaultKeyToRequestKeyMappings.put( SMS_TRANSPORT_KEY_DASHES,  SMS_TRANSPORT_KEY_DOTS);
 
         secretByAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
@@ -222,11 +230,12 @@ final class KeyVaultService {
     }
 
     private String replaceDotsWithDashes(String alias) {
-        if (alias.contains(".") &&
-            !this.vaultKeyToRequestKeyMappings.values().contains(alias)) {
+        if (alias.contains(".")) {
             String dots = alias;
             alias = alias.replace(".", "-");
-            this.mapVaultKeyToRequestedKey(alias, dots);
+            if (!this.vaultKeyToRequestKeyMappings.values().contains(alias)) {
+                this.mapVaultKeyToRequestedKey(alias, dots);
+            }
         }
         return alias;
     }
