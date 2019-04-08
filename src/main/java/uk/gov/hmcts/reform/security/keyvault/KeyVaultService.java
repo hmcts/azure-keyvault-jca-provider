@@ -222,7 +222,8 @@ final class KeyVaultService {
     }
 
     private String replaceDotsWithDashes(String alias) {
-        if (alias.contains(".")) {
+        if (alias.contains(".") &&
+            !this.vaultKeyToRequestKeyMappings.values().contains(alias)) {
             String dots = alias;
             alias = alias.replace(".", "-");
             this.mapVaultKeyToRequestedKey(alias, dots);
@@ -257,6 +258,8 @@ final class KeyVaultService {
 
     private void mapVaultKeyToRequestedKey(String vaultKey, String requestedKey) {
         this.vaultKeyToRequestKeyMappings.put(vaultKey, requestedKey);
+        this.keyAliasCache.refresh("all");
+        this.certificateAliasCache.refresh("all");
     }
 
     private <T> T getFromCacheOrNull(Function<String, T> cacheGet, String key) {
