@@ -96,7 +96,7 @@ final class KeyVaultService {
 
         this.vaultKeyToRequestKeyMappings = new ConcurrentHashMap<>();
 
-        this.vaultKeyToRequestKeyMappings.put( SMS_TRANSPORT_KEY_DASHES,  SMS_TRANSPORT_KEY_DOTS);
+        this.vaultKeyToRequestKeyMappings.put(SMS_TRANSPORT_KEY_DASHES, SMS_TRANSPORT_KEY_DOTS);
 
         secretByAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
@@ -233,7 +233,7 @@ final class KeyVaultService {
         if (alias.contains(".")) {
             String dots = alias;
             alias = alias.replace(".", "-");
-            if (!this.vaultKeyToRequestKeyMappings.values().contains(alias)) {
+            if (!this.vaultKeyToRequestKeyMappings.keySet().contains(alias)) {
                 this.mapVaultKeyToRequestedKey(alias, dots);
             }
         }

@@ -204,6 +204,7 @@ public class KeyVaultServiceTest {
         assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some-other-key", "help", "get-me", "the-hell", "outta-here"));
 
         this.keyVaultService.getSecretByAlias("some.other.key");
+        this.keyVaultService.getSecretByAlias("some.other.key");
 
         listOfAliases = this.keyVaultService.engineKeyAliases();
         assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some.other.key", "help", "get-me", "the-hell", "outta-here"));
