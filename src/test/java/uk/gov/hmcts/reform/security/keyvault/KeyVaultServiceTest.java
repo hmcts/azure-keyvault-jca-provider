@@ -201,13 +201,15 @@ public class KeyVaultServiceTest {
         given(this.vaultClient.getSecret(BASE_URL, "some-other-key")).willReturn(null);
 
         List<String> listOfAliases = this.keyVaultService.engineKeyAliases();
-        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some-other-key", "help", "get-me", "the-hell", "outta-here"));
+        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some-other-key",
+            "help", "get-me", "the-hell", "outta-here"));
 
         this.keyVaultService.getSecretByAlias("some.other.key");
         this.keyVaultService.getSecretByAlias("some.other.key");
 
         listOfAliases = this.keyVaultService.engineKeyAliases();
-        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some.other.key", "help", "get-me", "the-hell", "outta-here"));
+        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some.other.key",
+            "help", "get-me", "the-hell", "outta-here"));
     }
 
     /**
