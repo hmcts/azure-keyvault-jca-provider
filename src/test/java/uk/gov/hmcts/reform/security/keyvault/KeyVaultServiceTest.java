@@ -188,12 +188,6 @@ public class KeyVaultServiceTest {
             return null;
         }).when(mockCertificatePageList).forEach(any(Consumer.class));
 
-        doAnswer(invocation -> {
-            Consumer<KeyItem> arg0 = invocation.getArgument(0);
-            keyItems.forEach(arg0);
-            return null;
-        }).when(mockKeyPagedList).forEach(any(Consumer.class));
-
         given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
         given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
         given(this.vaultClient.listCertificates(BASE_URL)).willReturn(mockCertificatePageList);
@@ -204,7 +198,6 @@ public class KeyVaultServiceTest {
         assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some-other-key",
             "help", "get-me", "the-hell", "outta-here"));
 
-        this.keyVaultService.getSecretByAlias("some.other.key");
         this.keyVaultService.getSecretByAlias("some.other.key");
 
         listOfAliases = this.keyVaultService.engineKeyAliases();
