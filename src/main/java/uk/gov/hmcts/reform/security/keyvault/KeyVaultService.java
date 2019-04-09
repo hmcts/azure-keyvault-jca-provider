@@ -232,7 +232,7 @@ final class KeyVaultService {
         String result = alias;
         if (alias.contains(".")) {
             result = alias.replace(".", "-");
-            if (!this.vaultKeyToRequestKeyMappings.keySet().contains(alias)) {
+            if (!this.vaultKeyToRequestKeyMappings.keySet().contains(result)) {
                 this.mapVaultKeyToRequestedKey(result, alias);
             }
         }
