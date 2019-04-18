@@ -164,11 +164,13 @@ final class KeyVaultService {
                 .build();
             SecretBundle result = this.vaultClient.setSecret(secretRequest);
             if (result == null) {
-                throw new KeyStoreException("Result from KeyVault SET_SECRET was NULL for alias " + theAlias);
+                throw new KeyStoreException("Result from KeyVault SET_SECRET was NULL for alias "
+                    + theAlias);
             }
             result = this.getSecretByAlias(theAlias);
             if (result == null) {
-                throw new KeyStoreException("Result from KeyVault GET_SECRET after SET_SECRET was NULL for alias " + theAlias);
+                throw new KeyStoreException("Result from KeyVault GET_SECRET after SET_SECRET was NULL for alias "
+                    + theAlias);
             }
             System.out.println("Saving " + theAlias + " into KeyVault was successful");
             return result;
