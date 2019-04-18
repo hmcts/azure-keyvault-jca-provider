@@ -129,7 +129,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should call Delegate
      */
     @Override
-    public void engineSetKeyEntry(final String alias, final Key key, final char[] password, final Certificate[] chain) throws KeyStoreException {
+    public void engineSetKeyEntry(final String alias, final Key key, final char[] password, final Certificate[] chain)
+        throws KeyStoreException {
         vaultService.setKeyByAlias(alias, key);
     }
 
