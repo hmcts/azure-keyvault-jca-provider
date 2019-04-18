@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.KeyStoreSpi;
 import java.security.ProviderException;
 import java.security.cert.Certificate;
@@ -128,7 +129,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should call Delegate
      */
     @Override
-    public void engineSetKeyEntry(final String alias, final Key key, final char[] password, final Certificate[] chain) {
+    public void engineSetKeyEntry(final String alias, final Key key, final char[] password, final Certificate[] chain) throws KeyStoreException {
         vaultService.setKeyByAlias(alias, key);
     }
 

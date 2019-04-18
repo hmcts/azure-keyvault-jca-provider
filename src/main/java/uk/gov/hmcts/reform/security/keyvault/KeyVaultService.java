@@ -22,6 +22,7 @@ import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
 import uk.gov.hmcts.reform.vault.credential.ClientSecretKeyVaultCredential;
 
 import java.security.Key;
+import java.security.KeyStoreException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -153,14 +154,24 @@ final class KeyVaultService {
      * @should call delegate if key is SecretKey
      * @should throw exception if key is unsupported
      */
-    public SecretBundle setKeyByAlias(final String alias, final Key key) {
+    public SecretBundle setKeyByAlias(final String alias, final Key key) throws KeyStoreException {
         final String theAlias = replaceDotsWithDashes(alias);
         if (key instanceof SecretKey) {
+            System.out.println("Trying to save key into KeyVault with alias " + theAlias);
             final JsonWebKey jsonWebKey = JsonWebKey.fromAes((SecretKey) key);
             final SetSecretRequest secretRequest = new SetSecretRequest
                 .Builder(baseUrl, theAlias, new String(jsonWebKey.k()))
                 .build();
-            return this.vaultClient.setSecret(secretRequest);
+            SecretBundle result = this.vaultClient.setSecret(secretRequest);
+            if (result == null) {
+                throw new KeyStoreException("Result from KeyVault SET_SECRET was NULL for alias " + theAlias);
+            }
+            result = this.getSecretByAlias(theAlias);
+            if (result == null) {
+                throw new KeyStoreException("Result from KeyVault GET_SECRET after SET_SECRET was NULL for alias " + theAlias);
+            }
+            System.out.println("Saving " + theAlias + " into KeyVault was successful");
+            return result;
         }
         throw new UnsupportedOperationException("Only SecretKey Operations have been implemented");
     }
