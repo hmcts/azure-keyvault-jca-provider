@@ -11,6 +11,7 @@ import com.microsoft.azure.keyvault.models.SecretItem;
 import com.microsoft.azure.keyvault.requests.SetSecretRequest;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,6 +20,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
@@ -114,11 +116,14 @@ public class KeyVaultServiceTest {
      * @see KeyVaultService#setKeyByAlias(String, java.security.Key)
      */
     @Test
-    public void setKeyByAlias_shouldCallDelegateIfKeyIsSecretKey() {
+    public void setKeyByAlias_shouldCallDelegateIfKeyIsSecretKey() throws KeyStoreException {
         SecretKey mockKey = new KeyStore
             .SecretKeyEntry(new SecretKeySpec("SEKRET_KEY".getBytes(), "RAW")).getSecretKey();
         SecretBundle bundle = mock(SecretBundle.class);
+
         given(vaultClient.setSecret(any(SetSecretRequest.class))).willReturn(bundle);
+
+        given(vaultClient.getSecret(BASE_URL, ALIAS)).willReturn(bundle);
 
         SecretBundle resultBundle = keyVaultService.setKeyByAlias(ALIAS, mockKey);
 
@@ -131,7 +136,7 @@ public class KeyVaultServiceTest {
      * @see KeyVaultService#setKeyByAlias(String, java.security.Key)
      */
     @Test(expected = UnsupportedOperationException.class)
-    public void setKeyByAlias_shouldThrowExceptionIfKeyIsUnsupported() {
+    public void setKeyByAlias_shouldThrowExceptionIfKeyIsUnsupported() throws KeyStoreException {
         Key mockKey = mock(Key.class);
         keyVaultService.setKeyByAlias(ALIAS, mockKey);
     }
@@ -259,5 +264,36 @@ public class KeyVaultServiceTest {
 
         List<String> listOfAliases = this.keyVaultService.engineCertificateAliases();
         assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "key1", "key2"));
+    }
+
+    /**
+     * @verifies throw exception if setting secret fails
+     * @see KeyVaultService#setKeyByAlias(String, Key)
+     */
+    @Test(expected = KeyStoreException.class)
+    public void setKeyByAlias_shouldThrowExceptionIfSettingSecretFails() throws Exception {
+        SecretKey mockKey = new KeyStore
+            .SecretKeyEntry(new SecretKeySpec("SEKRET_KEY".getBytes(), "RAW")).getSecretKey();
+
+        given(vaultClient.setSecret(any(SetSecretRequest.class))).willReturn(null);
+
+        keyVaultService.setKeyByAlias(ALIAS, mockKey);
+    }
+
+    /**
+     * @verifies throw exception if getting key to check fails
+     * @see KeyVaultService#setKeyByAlias(String, Key)
+     */
+    @Test(expected = KeyStoreException.class)
+    public void setKeyByAlias_shouldThrowExceptionIfGettingKeyToCheckFails() throws Exception {
+        SecretKey mockKey = new KeyStore
+            .SecretKeyEntry(new SecretKeySpec("SEKRET_KEY".getBytes(), "RAW")).getSecretKey();
+        SecretBundle bundle = mock(SecretBundle.class);
+
+        given(vaultClient.setSecret(any(SetSecretRequest.class))).willReturn(bundle);
+
+        given(vaultClient.getSecret(BASE_URL, ALIAS)).willReturn(null);
+
+        keyVaultService.setKeyByAlias(ALIAS, mockKey);
     }
 }

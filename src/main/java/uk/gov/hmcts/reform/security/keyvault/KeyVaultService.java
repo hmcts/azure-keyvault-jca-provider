@@ -152,6 +152,8 @@ final class KeyVaultService {
 
     /**
      * @should call delegate if key is SecretKey
+     * @should throw exception if setting secret fails
+     * @should throw exception if getting key to check fails
      * @should throw exception if key is unsupported
      */
     public SecretBundle setKeyByAlias(final String alias, final Key key) throws KeyStoreException {
