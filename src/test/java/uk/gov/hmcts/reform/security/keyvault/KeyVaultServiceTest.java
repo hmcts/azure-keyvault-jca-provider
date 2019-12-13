@@ -4,18 +4,20 @@ import com.microsoft.azure.PagedList;
 import com.microsoft.azure.keyvault.KeyVaultClient;
 import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.CertificateItem;
+import com.microsoft.azure.keyvault.models.DeletedSecretBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.KeyItem;
 import com.microsoft.azure.keyvault.models.SecretBundle;
 import com.microsoft.azure.keyvault.models.SecretItem;
 import com.microsoft.azure.keyvault.requests.SetSecretRequest;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
 
 import java.security.Key;
 import java.security.KeyStore;
@@ -23,7 +25,6 @@ import java.security.KeyStoreException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
-
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -31,9 +32,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class KeyVaultServiceTest {
@@ -45,6 +48,9 @@ public class KeyVaultServiceTest {
     private static final String KEY_IDENTIFIER = "KEY_ID";
 
     @Mock
+    private AccessTokenKeyVaultCredential credential;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private KeyVaultClient vaultClient;
 
     private KeyVaultService keyVaultService;
@@ -215,7 +221,7 @@ public class KeyVaultServiceTest {
      */
     @Test
     public void deleteSecretByAlias_shouldCallDelegate() {
-        SecretBundle secretBundle = mock(SecretBundle.class);
+        DeletedSecretBundle secretBundle = mock(DeletedSecretBundle.class);
         given(this.vaultClient.deleteSecret(BASE_URL, ALIAS)).willReturn(secretBundle);
         SecretBundle resultBundle = this.keyVaultService.deleteSecretByAlias(ALIAS);
         verify(vaultClient).deleteSecret(BASE_URL, ALIAS);
@@ -294,5 +300,22 @@ public class KeyVaultServiceTest {
         given(vaultClient.getSecret(BASE_URL, ALIAS)).willReturn(null);
 
         keyVaultService.setKeyByAlias(ALIAS, mockKey);
+    }
+
+    /**
+     * @verifies invalidate cache and call delegate again
+     * @see KeyVaultService#sign(String, JsonWebKeySignatureAlgorithm, byte[])
+     */
+    @Test
+    public void sign_shouldInvalidateCacheAndCallDelegateAgain() throws Exception {
+        given(vaultClient.restClient().credentials()).willReturn(credential);
+
+        when(vaultClient.sign(any(), any(), any()))
+            .thenThrow(new RuntimeException("Error"))
+            .thenReturn(null);
+
+        keyVaultService.sign(null, null, null);
+
+        verify(vaultClient, atLeast(2)).sign(any(), any(), any());
     }
 }

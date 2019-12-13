@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.1.xsd">
+    <!-- CVE-2019-7611, CVE-2019-7614: A permission issue was found in Elasticsearch.
+        No native elasticsearch endpoints are exposed. No access control is implemented.
+        This issue doesn't affect the current implementation -->
+    <suppress>
+        <gav regex="true">.*</gav>
+        <cve>CVE-2019-10086</cve>
+    </suppress>
+
+    <!-- CVE-2019-7611, CVE-2019-7614: A permission issue was found in Elasticsearch.
+    No native elasticsearch endpoints are exposed. No access control is implemented.
+    This issue doesn't affect the current implementation -->
+    <suppress>
+        <gav regex="true">^com\.squareup\.retrofit2:adapter-rxjava:.*$</gav>
+        <cve>CVE-2018-1000844</cve>
+        <cve>CVE-2018-1000850</cve>
+    </suppress>
+</suppressions>

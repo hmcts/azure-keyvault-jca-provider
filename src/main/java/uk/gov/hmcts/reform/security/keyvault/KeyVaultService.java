@@ -82,7 +82,8 @@ final class KeyVaultService {
                         keyVaultConfig.getVaultClientKey()));
                 } else if (StringUtils.isNotEmpty(keyVaultConfig.getVaultMsiUrl())) {
                     return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig.getVaultMsiUrl(),
-                        keyVaultConfig.getVaultErrorMaxRetries(), keyVaultConfig.getVaultErrorRetryIntervalMillis()));
+                        keyVaultConfig.getVaultErrorMaxRetries(),
+                        keyVaultConfig.getVaultErrorRetryIntervalMillis()));
                 }
 
                 throw new IllegalArgumentException("System properties do not define which KeyVaultClient to create");
@@ -297,10 +298,24 @@ final class KeyVaultService {
 
     /**
      * @should call delegate
+     * @should invalidate cache and call delegate again
      */
     KeyOperationResult sign(final String keyIdentifier,
                             final JsonWebKeySignatureAlgorithm algorithm,
                             final byte[] digest) {
-        return vaultClient.sign(keyIdentifier, algorithm, digest);
+        try {
+            return vaultClient.sign(keyIdentifier, algorithm, digest);
+        } catch (Exception e) {
+            System.out.println("Exception was thrown during signing :"
+                    + "\nname     : " + e.getClass()
+                    + "\nmessage  : " + e.getMessage()
+                    + "\ninvalidating token cache and retrying.");
+            if (vaultClient.restClient().credentials()
+                instanceof AccessTokenKeyVaultCredential) {
+                ((AccessTokenKeyVaultCredential) vaultClient
+                    .restClient().credentials()).invalidateTokenCache();
+            }
+            return vaultClient.sign(keyIdentifier, algorithm, digest);
+        }
     }
 }
