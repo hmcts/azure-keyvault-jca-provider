@@ -7,6 +7,7 @@ cache:
   - $HOME/.gradle/caches/
   - $HOME/.gradle/wrapper/
 script:
+- jdk_switcher use openjdk8
 - ./gradlew build
 - ./gradlew jacocoTestReport
 - ./gradlew jacocoTestCoverageVerification
