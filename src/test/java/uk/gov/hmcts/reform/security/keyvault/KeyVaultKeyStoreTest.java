@@ -13,6 +13,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.ProviderException;
 import java.security.cert.Certificate;
 import java.util.Base64;
@@ -320,7 +321,7 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineSetKeyEntry(String, Key, char[], Certificate[])
      */
     @Test
-    public void engineSetKeyEntry_shouldCallDelegate() {
+    public void engineSetKeyEntry_shouldCallDelegate() throws KeyStoreException {
         SecretKey key = mock(SecretKey.class);
         SecretBundle secretBundle = mock(SecretBundle.class);
         given(vaultService.setKeyByAlias(ALIAS, key)).willReturn(secretBundle);

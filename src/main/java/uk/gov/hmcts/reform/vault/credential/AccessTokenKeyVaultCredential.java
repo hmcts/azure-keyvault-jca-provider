@@ -37,6 +37,10 @@ public class AccessTokenKeyVaultCredential extends AzureTokenCredentials {
         return accessTokenCacheLoader.getUnchecked(resource);
     }
 
+    public void invalidateTokenCache() {
+        this.accessTokenCacheLoader.invalidateAll();
+    }
+
     static final class AccessTokenCacheLoader extends CacheLoader<String, String> {
 
         private final HttpClient httpClient;

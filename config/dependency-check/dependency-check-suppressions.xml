@@ -25,4 +25,20 @@
         <gav regex="true">^^.*slf4j.*$$</gav>
         <cve>CVE-2018-8088</cve>
     </suppress>
+
+    <!-- CVE-2019-10086: In Apache Commons BeanUtils 1.9.2, a special BeanIntrospector class
+    was added which allows suppressing the ability for an attacker to access the classloader
+    via the class property available on all Java objects. -->
+    <suppress>
+        <gav regex="true">.*</gav>
+        <cve>CVE-2019-10086</cve>
+    </suppress>
+
+    <!-- CVE-2018-1000844, CVE-2018-1000850: As this provider doesn't accept remote
+     requests, these two CVEs cannot be exploited -->
+    <suppress>
+        <gav regex="true">^com\.squareup\.retrofit2:adapter-rxjava:.*$</gav>
+        <cve>CVE-2018-1000844</cve>
+        <cve>CVE-2018-1000850</cve>
+    </suppress>
 </suppressions>

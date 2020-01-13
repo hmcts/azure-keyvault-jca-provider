@@ -4,25 +4,27 @@ import com.microsoft.azure.PagedList;
 import com.microsoft.azure.keyvault.KeyVaultClient;
 import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.CertificateItem;
+import com.microsoft.azure.keyvault.models.DeletedSecretBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.KeyItem;
 import com.microsoft.azure.keyvault.models.SecretBundle;
 import com.microsoft.azure.keyvault.models.SecretItem;
 import com.microsoft.azure.keyvault.requests.SetSecretRequest;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
 
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
-
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -30,9 +32,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class KeyVaultServiceTest {
@@ -44,6 +48,9 @@ public class KeyVaultServiceTest {
     private static final String KEY_IDENTIFIER = "KEY_ID";
 
     @Mock
+    private AccessTokenKeyVaultCredential credential;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private KeyVaultClient vaultClient;
 
     private KeyVaultService keyVaultService;
@@ -114,11 +121,14 @@ public class KeyVaultServiceTest {
      * @see KeyVaultService#setKeyByAlias(String, java.security.Key)
      */
     @Test
-    public void setKeyByAlias_shouldCallDelegateIfKeyIsSecretKey() {
+    public void setKeyByAlias_shouldCallDelegateIfKeyIsSecretKey() throws KeyStoreException {
         SecretKey mockKey = new KeyStore
             .SecretKeyEntry(new SecretKeySpec("SEKRET_KEY".getBytes(), "RAW")).getSecretKey();
         SecretBundle bundle = mock(SecretBundle.class);
+
         given(vaultClient.setSecret(any(SetSecretRequest.class))).willReturn(bundle);
+
+        given(vaultClient.getSecret(BASE_URL, ALIAS)).willReturn(bundle);
 
         SecretBundle resultBundle = keyVaultService.setKeyByAlias(ALIAS, mockKey);
 
@@ -131,7 +141,7 @@ public class KeyVaultServiceTest {
      * @see KeyVaultService#setKeyByAlias(String, java.security.Key)
      */
     @Test(expected = UnsupportedOperationException.class)
-    public void setKeyByAlias_shouldThrowExceptionIfKeyIsUnsupported() {
+    public void setKeyByAlias_shouldThrowExceptionIfKeyIsUnsupported() throws KeyStoreException {
         Key mockKey = mock(Key.class);
         keyVaultService.setKeyByAlias(ALIAS, mockKey);
     }
@@ -157,6 +167,7 @@ public class KeyVaultServiceTest {
     @Test
     public void engineKeyAliases_shouldCallDelegateAndReturnParsedList() {
         List<SecretItem> secretItems = Arrays.asList(new SecretItem().withId("https://myvault.vault.azure.net/secrets/sms-transport-key/xyzAbc123"),
+            new SecretItem().withId("https://myvault.vault.azure.net/secrets/some-other-key/xyzAbc123"),
             new SecretItem().withId("https://myvault.vault.azure.net/secrets/help/abc123xyz789"),
             new SecretItem().withId("https://myvault.vault.azure.net/secrets/get-me/abc123xyz789"));
         PagedList<SecretItem> mockSecretPagedList = mock(PagedList.class);
@@ -177,14 +188,31 @@ public class KeyVaultServiceTest {
             return null;
         }).when(mockKeyPagedList).forEach(any(Consumer.class));
 
-        given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
-        given(this.vaultClient.listKeys(BASE_URL)).willReturn(mockKeyPagedList);
-        given(this.vaultClient.getSecret(BASE_URL, "sms-transport-key")).willReturn(null);
+        List<CertificateItem> certificateItems = Arrays.asList(
+            new CertificateItem().withId("https://myvault.vault.azure.net/certificates/cert/abc123xyz789"));
+        PagedList<CertificateItem> mockCertificatePageList = mock(PagedList.class);
 
-        this.keyVaultService.getSecretByAlias("sms.transport.key");
+        doAnswer(invocation -> {
+            Consumer<CertificateItem> arg0 = invocation.getArgument(0);
+            certificateItems.forEach(arg0);
+            return null;
+        }).when(mockCertificatePageList).forEach(any(Consumer.class));
+
+        given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
+        given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
+        given(this.vaultClient.listCertificates(BASE_URL)).willReturn(mockCertificatePageList);
+        given(this.vaultClient.listKeys(BASE_URL)).willReturn(mockKeyPagedList);
+        given(this.vaultClient.getSecret(BASE_URL, "some-other-key")).willReturn(null);
 
         List<String> listOfAliases = this.keyVaultService.engineKeyAliases();
-        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "help", "get-me", "the-hell", "outta-here"));
+        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some-other-key",
+            "help", "get-me", "the-hell", "outta-here"));
+
+        this.keyVaultService.getSecretByAlias("some.other.key");
+
+        listOfAliases = this.keyVaultService.engineKeyAliases();
+        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some.other.key",
+            "help", "get-me", "the-hell", "outta-here"));
     }
 
     /**
@@ -193,7 +221,7 @@ public class KeyVaultServiceTest {
      */
     @Test
     public void deleteSecretByAlias_shouldCallDelegate() {
-        SecretBundle secretBundle = mock(SecretBundle.class);
+        DeletedSecretBundle secretBundle = mock(DeletedSecretBundle.class);
         given(this.vaultClient.deleteSecret(BASE_URL, ALIAS)).willReturn(secretBundle);
         SecretBundle resultBundle = this.keyVaultService.deleteSecretByAlias(ALIAS);
         verify(vaultClient).deleteSecret(BASE_URL, ALIAS);
@@ -241,5 +269,53 @@ public class KeyVaultServiceTest {
 
         List<String> listOfAliases = this.keyVaultService.engineCertificateAliases();
         assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "key1", "key2"));
+    }
+
+    /**
+     * @verifies throw exception if setting secret fails
+     * @see KeyVaultService#setKeyByAlias(String, Key)
+     */
+    @Test(expected = KeyStoreException.class)
+    public void setKeyByAlias_shouldThrowExceptionIfSettingSecretFails() throws Exception {
+        SecretKey mockKey = new KeyStore
+            .SecretKeyEntry(new SecretKeySpec("SEKRET_KEY".getBytes(), "RAW")).getSecretKey();
+
+        given(vaultClient.setSecret(any(SetSecretRequest.class))).willReturn(null);
+
+        keyVaultService.setKeyByAlias(ALIAS, mockKey);
+    }
+
+    /**
+     * @verifies throw exception if getting key to check fails
+     * @see KeyVaultService#setKeyByAlias(String, Key)
+     */
+    @Test(expected = KeyStoreException.class)
+    public void setKeyByAlias_shouldThrowExceptionIfGettingKeyToCheckFails() throws Exception {
+        SecretKey mockKey = new KeyStore
+            .SecretKeyEntry(new SecretKeySpec("SEKRET_KEY".getBytes(), "RAW")).getSecretKey();
+        SecretBundle bundle = mock(SecretBundle.class);
+
+        given(vaultClient.setSecret(any(SetSecretRequest.class))).willReturn(bundle);
+
+        given(vaultClient.getSecret(BASE_URL, ALIAS)).willReturn(null);
+
+        keyVaultService.setKeyByAlias(ALIAS, mockKey);
+    }
+
+    /**
+     * @verifies invalidate cache and call delegate again
+     * @see KeyVaultService#sign(String, JsonWebKeySignatureAlgorithm, byte[])
+     */
+    @Test
+    public void sign_shouldInvalidateCacheAndCallDelegateAgain() throws Exception {
+        given(vaultClient.restClient().credentials()).willReturn(credential);
+
+        when(vaultClient.sign(any(), any(), any()))
+            .thenThrow(new RuntimeException("Error"))
+            .thenReturn(null);
+
+        keyVaultService.sign(null, null, null);
+
+        verify(vaultClient, atLeast(2)).sign(any(), any(), any());
     }
 }

@@ -11,12 +11,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.KeyStoreSpi;
 import java.security.ProviderException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -43,7 +45,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should return null if no keys are found
      */
     @Override
-    public Key engineGetKey(String alias, char[] password) {
+    public Key engineGetKey(final String alias, final char[] password) {
         if (alias.equalsIgnoreCase(SMS_TRANSPORT_KEY_DASHES)
             || alias.equalsIgnoreCase(SMS_TRANSPORT_KEY_DOTS)) {
             return getSmsTransportKey();
@@ -72,7 +74,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     private Key getSmsTransportKey() {
-        SecretBundle bundle = vaultService.getSecretByAlias(SMS_TRANSPORT_KEY_DASHES);
+        final SecretBundle bundle = vaultService.getSecretByAlias(SMS_TRANSPORT_KEY_DASHES);
         if (bundle != null) {
             // decode the base64 encoded string
             byte[] decodedKey = Base64.getDecoder().decode(bundle.value());
@@ -89,7 +91,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should throw exception
      */
     @Override
-    public Certificate[] engineGetCertificateChain(String alias) {
+    public Certificate[] engineGetCertificateChain(final String alias) {
         throw new UnsupportedOperationException();
     }
 
@@ -98,7 +100,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should return null when vault does not contain the alias
      */
     @Override
-    public Certificate engineGetCertificate(String alias) {
+    public Certificate engineGetCertificate(final String alias) {
         CertificateBundle certificateBundle = vaultService.getCertificateByAlias(alias);
         if (certificateBundle == null) {
             return null;
@@ -119,7 +121,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should throw exception
      */
     @Override
-    public Date engineGetCreationDate(String alias) {
+    public Date engineGetCreationDate(final String alias) {
         throw new UnsupportedOperationException();
     }
 
@@ -127,7 +129,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should call Delegate
      */
     @Override
-    public void engineSetKeyEntry(String alias, Key key, char[] password, Certificate[] chain) {
+    public void engineSetKeyEntry(final String alias, final Key key, final char[] password, final Certificate[] chain)
+        throws KeyStoreException {
         vaultService.setKeyByAlias(alias, key);
     }
 
@@ -135,7 +138,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should throw exception
      */
     @Override
-    public void engineSetKeyEntry(String alias, byte[] key, Certificate[] chain) {
+    public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain) {
         throw new UnsupportedOperationException();
     }
 
@@ -143,7 +146,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should throw exception
      */
     @Override
-    public void engineSetCertificateEntry(String alias, Certificate cert) {
+    public void engineSetCertificateEntry(final String alias, final Certificate cert) {
         throw new UnsupportedOperationException();
     }
 
@@ -151,7 +154,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should Call Delegate
      */
     @Override
-    public void engineDeleteEntry(String alias) {
+    public void engineDeleteEntry(final String alias) {
         vaultService.deleteSecretByAlias(alias);
     }
 
@@ -162,7 +165,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Enumeration<String> engineAliases() {
-        List<String> allAliases = vaultService.engineKeyAliases();
+        final List<String> allAliases =
+            new ArrayList<>(vaultService.engineKeyAliases());
         allAliases.addAll(vaultService.engineCertificateAliases());
         return Collections.enumeration(allAliases);
     }
@@ -173,7 +177,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should return false when vault does not contain the alias
      */
     @Override
-    public boolean engineContainsAlias(String alias) {
+    public boolean engineContainsAlias(final String alias) {
         try {
             return vaultService.getKeyByAlias(alias) != null
                 || vaultService.getSecretByAlias(alias) != null
@@ -198,8 +202,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should return false if alias is not within list
      */
     @Override
-    public boolean engineIsKeyEntry(String alias) {
-        List<String> aliases = vaultService.engineKeyAliases();
+    public boolean engineIsKeyEntry(final String alias) {
+        final List<String> aliases = vaultService.engineKeyAliases();
         return aliases.stream().anyMatch(vaultAlias -> vaultAlias.equalsIgnoreCase(alias));
     }
 
@@ -208,7 +212,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should return false if certificate isn't in keyvault
      */
     @Override
-    public boolean engineIsCertificateEntry(String alias) {
+    public boolean engineIsCertificateEntry(final String alias) {
         return vaultService.getCertificateByAlias(alias) != null;
     }
 
@@ -218,8 +222,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should return false if class is not supported
      */
     @Override
-    public boolean engineEntryInstanceOf(String alias,
-                                         Class<? extends KeyStore.Entry> entryClass) {
+    public boolean engineEntryInstanceOf(final String alias,
+                                         final Class<? extends KeyStore.Entry> entryClass) {
         if (entryClass == KeyStore.TrustedCertificateEntry.class) {
             return engineIsCertificateEntry(alias);
         }
@@ -235,7 +239,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should throw exception
      */
     @Override
-    public String engineGetCertificateAlias(Certificate cert) {
+    public String engineGetCertificateAlias(final Certificate cert) {
         throw new UnsupportedOperationException();
     }
 
@@ -243,12 +247,12 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * does nothing
      */
     @Override
-    public void engineStore(OutputStream stream, char[] password) {
+    public void engineStore(final OutputStream stream, final char[] password) {
         // Do nothing. Do not throw exceptions
     }
 
     @Override
-    public void engineLoad(InputStream stream, char[] password) {
+    public void engineLoad(final InputStream stream, final char[] password) {
         vaultService = KeyVaultService.getInstance();
     }
 }
