@@ -5,15 +5,19 @@ import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.SecretBundle;
 import com.microsoft.azure.keyvault.webkey.JsonWebKey;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType;
+import com.sun.crypto.provider.JceKeyStore;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.KeyStoreSpi;
+import java.security.NoSuchAlgorithmException;
 import java.security.ProviderException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -25,7 +29,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
-
 import javax.crypto.spec.SecretKeySpec;
 
 public final class KeyVaultKeyStore extends KeyStoreSpi {
@@ -36,6 +39,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
 
     private KeyVaultService vaultService;
 
+    private KeyStoreSpi localKeyStore = new JceKeyStore();
+
     /**
      * @should return rsa private key for rsa alias
      * @should throw provider exception for unsupported key type
@@ -43,9 +48,24 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should fetch sms-transport-key if called for sms.transport.key
      * @should return null if no sms-transport-key exists when called with sms.transport.key
      * @should return null if no keys are found
+     * @should try save SecretKeys in local store to KeyVault
      */
     @Override
     public Key engineGetKey(final String alias, final char[] password) {
+        if (localKeyStore.engineIsKeyEntry(alias)) {
+            try {
+                Key engineKey = localKeyStore.engineGetKey(alias, password);
+                if (engineKey instanceof SecretKeySpec) {
+                    System.out.println("Key \"" + alias + "\" is secret key in local keystore,"
+                                           + " saving to KeyVault");
+                    vaultService.setKeyByAlias(alias, engineKey);
+                }
+            } catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
+                System.out.println("Unable to save key to KeyVault : " + alias);
+                e.printStackTrace();
+            }
+        }
+
         if (alias.equalsIgnoreCase(SMS_TRANSPORT_KEY_DASHES)
             || alias.equalsIgnoreCase(SMS_TRANSPORT_KEY_DOTS)) {
             return getSmsTransportKey();
@@ -101,6 +121,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Certificate engineGetCertificate(final String alias) {
+        System.out.println("Engine get certificate called with " + alias);
         CertificateBundle certificateBundle = vaultService.getCertificateByAlias(alias);
         if (certificateBundle == null) {
             return null;
@@ -244,15 +265,23 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * does nothing
+     * @should try engine store the stream
      */
     @Override
-    public void engineStore(final OutputStream stream, final char[] password) {
-        // Do nothing. Do not throw exceptions
+    public void engineStore(final OutputStream stream, final char[] password)
+        throws IOException, NoSuchAlgorithmException, CertificateException {
+        localKeyStore.engineStore(stream, password);
     }
 
+    /**
+     * @should try engine load the stream
+     */
     @Override
-    public void engineLoad(final InputStream stream, final char[] password) {
+    public void engineLoad(final InputStream stream, final char[] password)
+        throws CertificateException, NoSuchAlgorithmException, IOException {
         vaultService = KeyVaultService.getInstance();
+        if (stream != null) {
+            localKeyStore.engineLoad(stream, password);
+        }
     }
 }

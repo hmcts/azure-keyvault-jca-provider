@@ -11,16 +11,19 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.KeyStoreSpi;
 import java.security.ProviderException;
 import java.security.cert.Certificate;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Enumeration;
-
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertFalse;
@@ -28,6 +31,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -56,6 +60,9 @@ public class KeyVaultKeyStoreTest {
             + "jjDv3Am2ShleJ8qpvxUET+UXtYtCgelNjr173kA8OSXw==";
     @Mock
     private KeyVaultService vaultService;
+
+    @Mock
+    private KeyStoreSpi localKeyStore;
 
     @InjectMocks
     private KeyVaultKeyStore keyStore;
@@ -409,5 +416,37 @@ public class KeyVaultKeyStoreTest {
     @Test
     public void engineEntryInstanceOf_shouldReturnFalseIfClassIsNotSupported() {
         assertFalse(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.Entry.class));
+    }
+
+    /**
+     * @verifies try save SecretKeys in local store to KeyVault
+     * @see KeyVaultKeyStore#engineGetKey(String, char[])
+     */
+    @Test
+    public void engineGetKey_shouldTrySaveSecretKeysInLocalStoreToKeyVault() throws Exception {
+        given(localKeyStore.engineIsKeyEntry(any())).willReturn(true);
+        given(localKeyStore.engineGetKey(any(), any())).willReturn(mock(SecretKeySpec.class));
+        given(vaultService.setKeyByAlias(any(), any())).willThrow(KeyStoreException.class);
+        assertNull(keyStore.engineGetKey("A_KEY", "A_PASSWORD".toCharArray()));
+    }
+
+    /**
+     * @verifies try engine load the stream
+     * @see KeyVaultKeyStore#engineLoad(java.io.InputStream, char[])
+     */
+    @Test
+    public void engineLoad_shouldTryEngineLoadTheStream() throws Exception {
+        keyStore.engineLoad(mock(InputStream.class), new char[0]);
+        verify(localKeyStore).engineLoad(any(), any());
+    }
+
+    /**
+     * @verifies try engine store the stream
+     * @see KeyVaultKeyStore#engineStore(java.io.OutputStream, char[])
+     */
+    @Test
+    public void engineStore_shouldTryEngineStoreTheStream() throws Exception {
+        keyStore.engineStore(mock(OutputStream.class), new char[0]);
+        verify(localKeyStore).engineStore(any(), any());
     }
 }
