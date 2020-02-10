@@ -121,7 +121,6 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Certificate engineGetCertificate(final String alias) {
-        System.out.println("Engine get certificate called with " + alias);
         CertificateBundle certificateBundle = vaultService.getCertificateByAlias(alias);
         if (certificateBundle == null) {
             return null;
