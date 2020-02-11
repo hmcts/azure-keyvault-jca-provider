@@ -156,12 +156,12 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
 
     @Override
     public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain) {
-        // do nothing
+        System.out.println("engineSetKeyEntry called with " + alias + ". Ignoring.");
     }
 
     @Override
     public void engineSetCertificateEntry(final String alias, final Certificate cert) {
-        // do nothing
+        System.out.println("engineSetCertificateEntry called with " + alias + ". Ignoring.");
     }
 
     /**
