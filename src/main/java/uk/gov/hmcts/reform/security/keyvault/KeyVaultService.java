@@ -56,6 +56,9 @@ final class KeyVaultService {
 
     private static final String SMS_TRANSPORT_KEY_DOTS = "sms.transport.key";
 
+    /**
+     * @should produce an instance
+     */
     public static KeyVaultService getInstance() {
         if (INSTANCE == null) {
             synchronized (KeyVaultService.class) {

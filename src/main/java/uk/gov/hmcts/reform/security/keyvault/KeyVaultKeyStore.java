@@ -154,20 +154,14 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
         vaultService.setKeyByAlias(alias, key);
     }
 
-    /**
-     * @should throw exception
-     */
     @Override
     public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain) {
-        System.out.println("engineSetKeyEntry was called. Ignoring. " + alias);
+        // do nothing
     }
 
-    /**
-     * @should throw exception
-     */
     @Override
     public void engineSetCertificateEntry(final String alias, final Certificate cert) {
-        System.out.println("engineSetCertificateEntry was called. Ignoring. " + alias);
+        // do nothing
     }
 
     /**
