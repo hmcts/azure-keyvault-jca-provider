@@ -160,7 +160,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain) {
-        throw new UnsupportedOperationException();
+        System.out.println("engineSetKeyEntry was called. Ignoring. " + alias);
     }
 
     /**
@@ -168,7 +168,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public void engineSetCertificateEntry(final String alias, final Certificate cert) {
-        throw new UnsupportedOperationException();
+        System.out.println("engineSetCertificateEntry was called. Ignoring. " + alias);
     }
 
     /**
@@ -209,11 +209,12 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should throw exception
+     * @should return the engine size
      */
     @Override
     public int engineSize() {
-        throw new UnsupportedOperationException();
+        return vaultService.engineKeyAliases().size()
+            + vaultService.engineCertificateAliases().size();
     }
 
     /**

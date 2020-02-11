@@ -19,6 +19,7 @@ import java.security.KeyStoreException;
 import java.security.KeyStoreSpi;
 import java.security.ProviderException;
 import java.security.cert.Certificate;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -26,6 +27,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -170,24 +172,6 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies throw exception
-     * @see KeyVaultKeyStore#engineSetKeyEntry(String, byte[], java.security.cert.Certificate[])
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineSetKeyEntry_shouldThrowException2() {
-        keyStore.engineSetKeyEntry(ALIAS, null, null);
-    }
-
-    /**
-     * @verifies throw exception
-     * @see KeyVaultKeyStore#engineSetCertificateEntry(String, java.security.cert.Certificate)
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineSetCertificateEntry_shouldThrowException() {
-        keyStore.engineSetCertificateEntry(ALIAS, null);
-    }
-
-    /**
      * @verifies return an enumeration
      * @see KeyVaultKeyStore#engineAliases()
      */
@@ -232,15 +216,6 @@ public class KeyVaultKeyStoreTest {
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(null);
 
         assertFalse(keyStore.engineContainsAlias(ALIAS));
-    }
-
-    /**
-     * @verifies throw exception
-     * @see KeyVaultKeyStore#engineSize()
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineSize_shouldThrowException() {
-        keyStore.engineSize();
     }
 
     /**
@@ -448,5 +423,16 @@ public class KeyVaultKeyStoreTest {
     public void engineStore_shouldTryEngineStoreTheStream() throws Exception {
         keyStore.engineStore(mock(OutputStream.class), new char[0]);
         verify(localKeyStore).engineStore(any(), any());
+    }
+
+    /**
+     * @verifies return the engine size
+     * @see KeyVaultKeyStore#engineSize()
+     */
+    @Test
+    public void engineSize_shouldReturnTheEngineSize() throws Exception {
+        given(vaultService.engineKeyAliases()).willReturn(Arrays.asList("1", "2", "3"));
+        given(vaultService.engineCertificateAliases()).willReturn(Arrays.asList("1", "2"));
+        assertEquals(keyStore.engineSize(), 5);
     }
 }
