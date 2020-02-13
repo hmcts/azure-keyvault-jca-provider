@@ -9,7 +9,7 @@ plugins {
 }
 
 group = 'uk.gov.hmcts.reform.security.keyvault'
-version = '1.2.7'
+version = '1.2.7-FOR_SURE'
 sourceCompatibility = 1.8
 
 dependencies {

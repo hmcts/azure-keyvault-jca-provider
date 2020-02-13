@@ -22,6 +22,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPrivateKey;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -51,19 +52,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should try save SecretKeys in local store to KeyVault
      */
     @Override
-    public Key engineGetKey(final String alias, final char[] password) {
-        if (localKeyStore.engineIsKeyEntry(alias)) {
-            try {
-                Key engineKey = localKeyStore.engineGetKey(alias, password);
-                if (engineKey instanceof SecretKeySpec) {
-                    System.out.println("Key \"" + alias + "\" is secret key in local keystore,"
-                                           + " saving to KeyVault");
-                    vaultService.setKeyByAlias(alias, engineKey);
-                }
-            } catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
-                System.out.println("Unable to save key to KeyVault : " + alias);
-                e.printStackTrace();
-            }
+    public Key engineGetKey(final String alias, final char[] password)
+        throws UnrecoverableKeyException, NoSuchAlgorithmException {
+        System.out.println("engineGetKey CALLED :" + alias);
+        if (getFromLocalIfEC(alias, password)) {
+            return localKeyStore.engineGetKey(alias, password);
         }
 
         if (alias.equalsIgnoreCase(SMS_TRANSPORT_KEY_DASHES)
@@ -78,6 +71,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
             JsonWebKeyType keyType = key.kty();
             if (JsonWebKeyType.RSA.equals(keyType) || JsonWebKeyType.RSA_HSM.equals(keyType)) {
                 return new KeyVaultRSAPrivateKey(keyBundle.keyIdentifier().identifier(), JsonWebKeyType.RSA.toString());
+            } else if (localKeyStore.engineContainsAlias(alias)) {
+                return localKeyStore.engineGetKey(alias, password);
             } else {
                 throw new ProviderException("JsonWebKeyType [" + keyType + "] not implemented");
             }
@@ -91,6 +86,22 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
             }
         }
         return null;
+    }
+
+    private boolean getFromLocalIfEC(String alias, char[] password) {
+        if (localKeyStore.engineIsKeyEntry(alias)) {
+            try {
+                Key engineKey = localKeyStore.engineGetKey(alias, password);
+                if (engineKey instanceof ECPrivateKey) {
+                    System.out.println("Found EC Key in local keystore, using that instead");
+                    return true;
+                }
+            } catch (UnrecoverableKeyException | NoSuchAlgorithmException e) {
+                System.out.println("Unable to save key to KeyVault : " + alias);
+                e.printStackTrace();
+            }
+        }
+        return false;
     }
 
     private Key getSmsTransportKey() {
@@ -112,7 +123,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Certificate[] engineGetCertificateChain(final String alias) {
-        throw new UnsupportedOperationException();
+        System.out.println("engineGetCertificateChain called :" + alias);
+        return localKeyStore.engineGetCertificateChain(alias);
     }
 
     /**
@@ -121,9 +133,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Certificate engineGetCertificate(final String alias) {
+        System.out.println("engineGetCertificate CALLED :" + alias);
         CertificateBundle certificateBundle = vaultService.getCertificateByAlias(alias);
         if (certificateBundle == null) {
-            return null;
+            System.out.println("NO CERTIFICATE, TRYING TO GET FROM LOCAL KEYSTORE");
+            return localKeyStore.engineGetCertificate(alias);
         }
 
         X509Certificate certificate;
@@ -131,6 +145,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
             certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certificateBundle.cer()));
         } catch (CertificateException e) {
+            System.out.println("CERTIFICATE NO GOOD AAAAAH HELP");
             throw new ProviderException(e);
         }
 
@@ -142,7 +157,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Date engineGetCreationDate(final String alias) {
-        throw new UnsupportedOperationException();
+        System.out.println("engineGetCertificateChain called");
+        return localKeyStore.engineGetCreationDate(alias);
     }
 
     /**
@@ -151,25 +167,32 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     @Override
     public void engineSetKeyEntry(final String alias, final Key key, final char[] password, final Certificate[] chain)
         throws KeyStoreException {
+        System.out.println("engineSetKeyEntry CALLED :" + alias);
         vaultService.setKeyByAlias(alias, key);
+        localKeyStore.engineSetKeyEntry(alias, key, password, chain);
     }
 
     @Override
-    public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain) {
+    public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain)
+        throws KeyStoreException {
         System.out.println("engineSetKeyEntry called with " + alias + ". Ignoring.");
+        localKeyStore.engineSetKeyEntry(alias, key, chain);
     }
 
     @Override
-    public void engineSetCertificateEntry(final String alias, final Certificate cert) {
+    public void engineSetCertificateEntry(final String alias, final Certificate cert) throws KeyStoreException {
         System.out.println("engineSetCertificateEntry called with " + alias + ". Ignoring.");
+        localKeyStore.engineSetCertificateEntry(alias, cert);
     }
 
     /**
      * @should Call Delegate
      */
     @Override
-    public void engineDeleteEntry(final String alias) {
+    public void engineDeleteEntry(final String alias) throws KeyStoreException {
+        System.out.println("engineDeleteEntry CALLED :" + alias);
         vaultService.deleteSecretByAlias(alias);
+        localKeyStore.engineDeleteEntry(alias);
     }
 
     /**
@@ -192,6 +215,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public boolean engineContainsAlias(final String alias) {
+        System.out.println("engineContainsAlias CALLED :" + alias);
         try {
             return vaultService.getKeyByAlias(alias) != null
                 || vaultService.getSecretByAlias(alias) != null
@@ -239,15 +263,21 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     @Override
     public boolean engineEntryInstanceOf(final String alias,
                                          final Class<? extends KeyStore.Entry> entryClass) {
+        boolean isThatThing = false;
         if (entryClass == KeyStore.TrustedCertificateEntry.class) {
-            return engineIsCertificateEntry(alias);
+            isThatThing = engineIsCertificateEntry(alias);
+        } else if (entryClass == KeyStore.PrivateKeyEntry.class) {
+            isThatThing = vaultService.getKeyByAlias(alias) != null;
+        } else if (entryClass == KeyStore.SecretKeyEntry.class) {
+            isThatThing = !engineIsCertificateEntry(alias)
+                && vaultService.getSecretByAlias(alias) != null;
+
+        } else {
+            isThatThing = localKeyStore.engineEntryInstanceOf(alias, entryClass);
         }
-        if (entryClass == KeyStore.PrivateKeyEntry.class
-            || entryClass == KeyStore.SecretKeyEntry.class) {
-            return vaultService.getKeyByAlias(alias) != null
-                || vaultService.getSecretByAlias(alias) != null;
-        }
-        return false;
+        System.out.println("ENGINE IS INSTANCE OF CALLED FOR " + alias + " CLASS: " + entryClass);
+        System.out.println("RESULT " + isThatThing);
+        return isThatThing;
     }
 
     /**
@@ -255,7 +285,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public String engineGetCertificateAlias(final Certificate cert) {
-        throw new UnsupportedOperationException();
+        System.out.println("engineGetCertificateChain called");
+        return localKeyStore.engineGetCertificateAlias(cert);
     }
 
     /**

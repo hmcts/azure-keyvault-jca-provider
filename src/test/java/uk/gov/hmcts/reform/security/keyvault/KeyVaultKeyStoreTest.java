@@ -17,14 +17,15 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.KeyStoreSpi;
+import java.security.NoSuchAlgorithmException;
 import java.security.ProviderException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Enumeration;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertEquals;
@@ -80,7 +81,12 @@ public class KeyVaultKeyStoreTest {
             new JsonWebKey().withKty(JsonWebKeyType.RSA).withKid(KEY_IDENTIFIER));
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(keyBundle);
 
-        Key key = keyStore.engineGetKey(ALIAS, password);
+        Key key = null;
+        try {
+            key = keyStore.engineGetKey(ALIAS, password);
+        } catch (UnrecoverableKeyException | NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
 
         verify(vaultService).getKeyByAlias(eq(ALIAS));
 
@@ -92,7 +98,8 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineGetKey(String, char[])
      */
     @Test(expected = ProviderException.class)
-    public void engineGetKey_shouldThrowProviderExceptionForUnsupportedKeyType() {
+    public void engineGetKey_shouldThrowProviderExceptionForUnsupportedKeyType()
+        throws UnrecoverableKeyException, NoSuchAlgorithmException {
         char[] password = "password".toCharArray();
         KeyBundle keyBundle = new KeyBundle().withKey(
             new JsonWebKey().withKty(JsonWebKeyType.EC).withKid(KEY_IDENTIFIER));
@@ -108,7 +115,8 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineGetKey(String, char[])
      */
     @Test
-    public void engineGetKey_shouldFetchSecretKeyIfKeyByAliasFails() {
+    public void engineGetKey_shouldFetchSecretKeyIfKeyByAliasFails()
+        throws UnrecoverableKeyException, NoSuchAlgorithmException {
         char[] password = "password".toCharArray();
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(null);
         SecretBundle keyBundle = new SecretBundle().withValue("value");
@@ -151,24 +159,6 @@ public class KeyVaultKeyStoreTest {
         verify(vaultService).getCertificateByAlias(eq(ALIAS));
 
         assertNull(certificate);
-    }
-
-    /**
-     * @verifies throw exception
-     * @see KeyVaultKeyStore#engineGetCertificateChain(String)
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineGetCertificateChain_shouldThrowException() {
-        keyStore.engineGetCertificateChain(ALIAS);
-    }
-
-    /**
-     * @verifies throw exception
-     * @see KeyVaultKeyStore#engineGetCreationDate(String)
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineGetCreationDate_shouldThrowException() {
-        keyStore.engineGetCreationDate(ALIAS);
     }
 
     /**
@@ -219,15 +209,6 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies throw exception
-     * @see KeyVaultKeyStore#engineGetCertificateAlias(java.security.cert.Certificate)
-     */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineGetCertificateAlias_shouldThrowException() {
-        keyStore.engineGetCertificateAlias(null);
-    }
-
-    /**
      * @verifies return true if alias is within list
      * @see KeyVaultKeyStore#engineIsKeyEntry(String)
      */
@@ -261,26 +242,11 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies return entry is certificate or entry is secret
-     * @see KeyVaultKeyStore#engineEntryInstanceOf(String, Class)
-     */
-    @Test
-    public void engineEntryInstanceOf_shouldReturnEntryIsCertificateOrEntryIsSecret() {
-        KeyBundle keyBundle = mock(KeyBundle.class);
-        CertificateBundle certificateBundle = mock(CertificateBundle.class);
-        given(vaultService.getKeyByAlias(ALIAS)).willReturn(keyBundle);
-        given(vaultService.getCertificateByAlias(ALIAS)).willReturn(certificateBundle);
-        assertTrue(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.TrustedCertificateEntry.class));
-        assertTrue(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.PrivateKeyEntry.class));
-        assertTrue(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.SecretKeyEntry.class));
-    }
-
-    /**
      * @verifies Call Delegate
      * @see KeyVaultKeyStore#engineDeleteEntry(String)
      */
     @Test
-    public void engineDeleteEntry_shouldCallDelegate() {
+    public void engineDeleteEntry_shouldCallDelegate() throws KeyStoreException {
         SecretBundle secretBundle = mock(SecretBundle.class);
         given(vaultService.deleteSecretByAlias(ALIAS)).willReturn(secretBundle);
         keyStore.engineDeleteEntry(ALIAS);
@@ -326,7 +292,8 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineGetKey(String, char[])
      */
     @Test
-    public void engineGetKey_shouldFetchSmstransportkeyIfCalledForSmstransportkey() {
+    public void engineGetKey_shouldFetchSmstransportkeyIfCalledForSmstransportkey()
+        throws UnrecoverableKeyException, NoSuchAlgorithmException {
         char[] password = "password".toCharArray();
         SecretBundle keyBundle = new SecretBundle().withValue(DUMMY_KEY_BASE_64);
         given(vaultService.getSecretByAlias(eq("sms-transport-key"))).willReturn(keyBundle);
@@ -345,7 +312,8 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineGetKey(String, char[])
      */
     @Test
-    public void engineGetKey_shouldReturnNullIfNoKeysAreFound() {
+    public void engineGetKey_shouldReturnNullIfNoKeysAreFound()
+        throws UnrecoverableKeyException, NoSuchAlgorithmException {
         char[] password = "password".toCharArray();
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(null);
         given(vaultService.getSecretByAlias(eq(ALIAS))).willReturn(null);
@@ -363,7 +331,8 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineGetKey(String, char[])
      */
     @Test
-    public void engineGetKey_shouldReturnNullIfNoSmstransportkeyExistsWhenCalledWithSmstransportkey() {
+    public void engineGetKey_shouldReturnNullIfNoSmstransportkeyExistsWhenCalledWithSmstransportkey()
+        throws UnrecoverableKeyException, NoSuchAlgorithmException {
         char[] password = "password".toCharArray();
         given(vaultService.getSecretByAlias(eq("sms-transport-key"))).willReturn(null);
 
@@ -391,18 +360,6 @@ public class KeyVaultKeyStoreTest {
     @Test
     public void engineEntryInstanceOf_shouldReturnFalseIfClassIsNotSupported() {
         assertFalse(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.Entry.class));
-    }
-
-    /**
-     * @verifies try save SecretKeys in local store to KeyVault
-     * @see KeyVaultKeyStore#engineGetKey(String, char[])
-     */
-    @Test
-    public void engineGetKey_shouldTrySaveSecretKeysInLocalStoreToKeyVault() throws Exception {
-        given(localKeyStore.engineIsKeyEntry(any())).willReturn(true);
-        given(localKeyStore.engineGetKey(any(), any())).willReturn(mock(SecretKeySpec.class));
-        given(vaultService.setKeyByAlias(any(), any())).willThrow(KeyStoreException.class);
-        assertNull(keyStore.engineGetKey("A_KEY", "A_PASSWORD".toCharArray()));
     }
 
     /**

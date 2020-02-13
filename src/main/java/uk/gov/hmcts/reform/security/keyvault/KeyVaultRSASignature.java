@@ -40,6 +40,7 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
      */
     @Override
     protected void engineInitVerify(PublicKey publicKey) {
+        System.out.println("engineVerify called for " + identifier);
         throw new UnsupportedOperationException();
     }
 
@@ -49,7 +50,9 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
      */
     @Override
     protected void engineInitSign(PrivateKey privateKey) throws InvalidKeyException {
+        System.out.println("engineInitSign CALLED!!" + identifier);
         if (!(privateKey instanceof KeyVaultRSAPrivateKey)) {
+            System.out.println("engineInitSign NO GOOD, KEY NOT RSA PRIVATE KEY OH NO");
             throw new InvalidKeyException("PrivateKey must be an instance of " + KeyVaultRSAPrivateKey.class.getName());
         }
         identifier = ((KeyVaultKey) privateKey).getIdentifier();
@@ -60,6 +63,7 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
      */
     @Override
     protected void engineUpdate(byte byt) {
+        System.out.println("engineVerify called for " + identifier);
         throw new UnsupportedOperationException();
     }
 
@@ -86,11 +90,18 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
         does not support hashing of content as part of signature creation.
         Applications should hash data to be signed locally and then request Azure Key Vault sign the hash
          */
-        byte[] digest = messageDigest.digest(data);
-        messageDigest.reset();
+        try {
+            System.out.println("engineSign called for " + identifier);
+            byte[] digest = messageDigest.digest(data);
+            messageDigest.reset();
 
-        KeyOperationResult result = vaultService.sign(identifier, JsonWebKeySignatureAlgorithm.RS256, digest);
-        return result.result();
+            KeyOperationResult result = vaultService.sign(identifier, JsonWebKeySignatureAlgorithm.RS256, digest);
+            return result.result();
+        } catch (Exception e) {
+            System.out.println("Exception called during engineSign");
+            e.printStackTrace();
+        }
+        return new byte[0];
     }
 
     /**
@@ -98,6 +109,7 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
      */
     @Override
     protected boolean engineVerify(byte[] sigBytes) {
+        System.out.println("engineVerify called for " + identifier);
         throw new UnsupportedOperationException();
     }
 
@@ -106,6 +118,7 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
      */
     @Override
     protected void engineSetParameter(String param, Object value) throws InvalidParameterException {
+        System.out.println("engineVerify called for " + identifier);
         throw new UnsupportedOperationException();
     }
 
@@ -114,6 +127,7 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
      */
     @Override
     protected Object engineGetParameter(String param) throws InvalidParameterException {
+        System.out.println(param + "!! >>>>>>>> engineGetParameter <<<<<<<< !!" + identifier);
         throw new UnsupportedOperationException();
     }
 
