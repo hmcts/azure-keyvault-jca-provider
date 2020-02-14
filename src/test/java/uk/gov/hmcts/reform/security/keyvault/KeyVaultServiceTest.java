@@ -29,6 +29,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -317,5 +318,14 @@ public class KeyVaultServiceTest {
         keyVaultService.sign(null, null, null);
 
         verify(vaultClient, atLeast(2)).sign(any(), any(), any());
+    }
+
+    /**
+     * @verifies produce an instance
+     * @see KeyVaultService#getInstance()
+     */
+    @Test
+    public void getInstance_shouldProduceAnInstance() {
+        assertNotNull(KeyVaultService.getInstance());
     }
 }

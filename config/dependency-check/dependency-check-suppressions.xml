@@ -26,6 +26,16 @@
         <cve>CVE-2018-8088</cve>
     </suppress>
 
+    <!-- CVE-2019-20330
+    This vulnerability has something to do with ehcache, the description is so vague it
+    could be absolutely anything. This project doesn't use ehcache.
+    -->
+    <suppress>
+        <notes>suppress false positives with databind</notes>
+        <gav regex="true">^com\.fasterxml\.jackson\.core:jackson-databind.*$</gav>
+        <cve>CVE-2019-20330</cve>
+    </suppress>
+
     <!-- CVE-2019-10086: In Apache Commons BeanUtils 1.9.2, a special BeanIntrospector class
     was added which allows suppressing the ability for an attacker to access the classloader
     via the class property available on all Java objects. -->

@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-
 import javax.crypto.SecretKey;
 
 final class KeyVaultService {
@@ -57,6 +56,9 @@ final class KeyVaultService {
 
     private static final String SMS_TRANSPORT_KEY_DOTS = "sms.transport.key";
 
+    /**
+     * @should produce an instance
+     */
     public static KeyVaultService getInstance() {
         if (INSTANCE == null) {
             synchronized (KeyVaultService.class) {
@@ -65,7 +67,6 @@ final class KeyVaultService {
                 }
             }
         }
-
         return INSTANCE;
     }
 
@@ -178,7 +179,7 @@ final class KeyVaultService {
             System.out.println("Saving " + theAlias + " into KeyVault was successful");
             return result;
         }
-        throw new UnsupportedOperationException("Only SecretKey Operations have been implemented");
+        throw new UnsupportedOperationException("Only SecretKey Operations have been implemented : " + alias);
     }
 
     /**
@@ -248,7 +249,9 @@ final class KeyVaultService {
         String result = alias;
         if (alias.contains(".")) {
             result = alias.replace(".", "-");
-            if (!this.vaultKeyToRequestKeyMappings.keySet().contains(result)) {
+            if (!this.vaultKeyToRequestKeyMappings.containsKey(result)) {
+                System.out.println("Replacing dots with dashes : " + alias
+                                       + " " + result);
                 this.mapVaultKeyToRequestedKey(result, alias);
             }
         }
