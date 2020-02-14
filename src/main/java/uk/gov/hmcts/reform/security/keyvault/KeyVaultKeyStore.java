@@ -111,6 +111,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     public Certificate engineGetCertificate(final String alias) {
         CertificateBundle certificateBundle = vaultService.getCertificateByAlias(alias);
         if (certificateBundle == null) {
+            // AM will throw exceptions if it expects a certificate and the provider does not provide one
+            // "test" is an RSA cert. Requested Cert will be unavailable for signing.
             certificateBundle = vaultService.getCertificateByAlias("test");
         }
 
