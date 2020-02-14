@@ -96,12 +96,12 @@ public class KeyVaultKeyStoreTest {
      */
     @Test(expected = ProviderException.class)
     public void engineGetKey_shouldThrowProviderExceptionForUnsupportedKeyType() {
-        char[] password = "password".toCharArray();
         KeyBundle keyBundle = mock(KeyBundle.class);
         JsonWebKey key = mock(JsonWebKey.class);
         given(vaultService.getKeyByAlias(ALIAS)).willReturn(keyBundle);
         given(keyBundle.key()).willReturn(key);
         given(key.kty()).willReturn(JsonWebKeyType.OCT);
+        char[] password = "password".toCharArray();
         keyStore.engineGetKey(ALIAS, password);
     }
 
@@ -111,7 +111,6 @@ public class KeyVaultKeyStoreTest {
      */
     @Test
     public void engineGetKey_shouldReturnEcKeyForEcKeyType() {
-        char[] password = "password".toCharArray();
         KeyBundle keyBundle = mock(KeyBundle.class);
         JsonWebKey key = mock(JsonWebKey.class);
         given(keyBundle.key()).willReturn(key);
@@ -119,7 +118,7 @@ public class KeyVaultKeyStoreTest {
         given(key.toEC(true))
             .willReturn(new KeyPair(mock(PublicKey.class), mock(PrivateKey.class)));
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(keyBundle);
-
+        char[] password = "password".toCharArray();
         keyStore.engineGetKey(ALIAS, password);
 
         verify(vaultService).getKeyByAlias(eq(ALIAS));

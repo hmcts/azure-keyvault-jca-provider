@@ -7,7 +7,6 @@ import com.microsoft.azure.keyvault.webkey.JsonWebKey;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType;
 import com.sun.crypto.provider.JceKeyStore;
 
-import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +28,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+import javax.crypto.spec.SecretKeySpec;
 
 public final class KeyVaultKeyStore extends KeyStoreSpi {
 
