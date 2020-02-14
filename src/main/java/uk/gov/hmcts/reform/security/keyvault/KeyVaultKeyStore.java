@@ -7,6 +7,7 @@ import com.microsoft.azure.keyvault.webkey.JsonWebKey;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType;
 import com.sun.crypto.provider.JceKeyStore;
 
+import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +18,6 @@ import java.security.KeyStoreException;
 import java.security.KeyStoreSpi;
 import java.security.NoSuchAlgorithmException;
 import java.security.ProviderException;
-import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
-import javax.crypto.spec.SecretKeySpec;
 
 public final class KeyVaultKeyStore extends KeyStoreSpi {
 
@@ -44,6 +43,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     /**
      * @should return rsa private key for rsa alias
      * @should throw provider exception for unsupported key type
+     * @should return ec key for ec key type
      * @should fetch Secret Key if Key by Alias fails
      * @should fetch sms-transport-key if called for sms.transport.key
      * @should return null if no sms-transport-key exists when called with sms.transport.key
@@ -52,20 +52,6 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Key engineGetKey(final String alias, final char[] password) {
-        if (localKeyStore.engineIsKeyEntry(alias)) {
-            try {
-                Key engineKey = localKeyStore.engineGetKey(alias, password);
-                if (engineKey instanceof SecretKeySpec) {
-                    System.out.println("Key \"" + alias + "\" is secret key in local keystore,"
-                                           + " saving to KeyVault");
-                    vaultService.setKeyByAlias(alias, engineKey);
-                }
-            } catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
-                System.out.println("Unable to save key to KeyVault : " + alias);
-                e.printStackTrace();
-            }
-        }
-
         if (alias.equalsIgnoreCase(SMS_TRANSPORT_KEY_DASHES)
             || alias.equalsIgnoreCase(SMS_TRANSPORT_KEY_DOTS)) {
             return getSmsTransportKey();
@@ -78,6 +64,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
             JsonWebKeyType keyType = key.kty();
             if (JsonWebKeyType.RSA.equals(keyType) || JsonWebKeyType.RSA_HSM.equals(keyType)) {
                 return new KeyVaultRSAPrivateKey(keyBundle.keyIdentifier().identifier(), JsonWebKeyType.RSA.toString());
+            } else if (JsonWebKeyType.EC.equals(keyType) || JsonWebKeyType.EC_HSM.equals(keyType)) {
+                return key.toEC(true).getPrivate();
             } else {
                 throw new ProviderException("JsonWebKeyType [" + keyType + "] not implemented");
             }
@@ -123,7 +111,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     public Certificate engineGetCertificate(final String alias) {
         CertificateBundle certificateBundle = vaultService.getCertificateByAlias(alias);
         if (certificateBundle == null) {
-            return null;
+            certificateBundle = vaultService.getCertificateByAlias("test");
         }
 
         X509Certificate certificate;
@@ -138,11 +126,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should throw exception
+     * @should return a date
      */
     @Override
     public Date engineGetCreationDate(final String alias) {
-        throw new UnsupportedOperationException();
+        return localKeyStore.engineGetCreationDate(alias);
     }
 
     /**
@@ -152,24 +140,33 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     public void engineSetKeyEntry(final String alias, final Key key, final char[] password, final Certificate[] chain)
         throws KeyStoreException {
         vaultService.setKeyByAlias(alias, key);
+        localKeyStore.engineSetKeyEntry(alias, key, password, chain);
     }
 
+    /**
+     * @should set key entry in local store
+     */
     @Override
-    public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain) {
-        System.out.println("engineSetKeyEntry called with " + alias + ". Ignoring.");
+    public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain)
+        throws KeyStoreException {
+        localKeyStore.engineSetKeyEntry(alias, key, chain);
     }
 
+    /**
+     * @should set key entry in local store
+     */
     @Override
-    public void engineSetCertificateEntry(final String alias, final Certificate cert) {
-        System.out.println("engineSetCertificateEntry called with " + alias + ". Ignoring.");
+    public void engineSetCertificateEntry(final String alias, final Certificate cert) throws KeyStoreException {
+        localKeyStore.engineSetCertificateEntry(alias, cert);
     }
 
     /**
      * @should Call Delegate
      */
     @Override
-    public void engineDeleteEntry(final String alias) {
+    public void engineDeleteEntry(final String alias) throws KeyStoreException {
         vaultService.deleteSecretByAlias(alias);
+        localKeyStore.engineDeleteEntry(alias);
     }
 
     /**
@@ -241,11 +238,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
                                          final Class<? extends KeyStore.Entry> entryClass) {
         if (entryClass == KeyStore.TrustedCertificateEntry.class) {
             return engineIsCertificateEntry(alias);
-        }
-        if (entryClass == KeyStore.PrivateKeyEntry.class
-            || entryClass == KeyStore.SecretKeyEntry.class) {
-            return vaultService.getKeyByAlias(alias) != null
-                || vaultService.getSecretByAlias(alias) != null;
+        } else if (entryClass == KeyStore.PrivateKeyEntry.class) {
+            return  vaultService.getKeyByAlias(alias) != null;
+        } else if (entryClass == KeyStore.SecretKeyEntry.class) {
+            return  !engineIsCertificateEntry(alias)
+                && vaultService.getSecretByAlias(alias) != null;
         }
         return false;
     }

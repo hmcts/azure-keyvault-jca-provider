@@ -14,17 +14,20 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.Key;
+import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.KeyStoreSpi;
+import java.security.PrivateKey;
 import java.security.ProviderException;
+import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Enumeration;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.junit.Assert.assertEquals;
@@ -94,8 +97,27 @@ public class KeyVaultKeyStoreTest {
     @Test(expected = ProviderException.class)
     public void engineGetKey_shouldThrowProviderExceptionForUnsupportedKeyType() {
         char[] password = "password".toCharArray();
-        KeyBundle keyBundle = new KeyBundle().withKey(
-            new JsonWebKey().withKty(JsonWebKeyType.EC).withKid(KEY_IDENTIFIER));
+        KeyBundle keyBundle = mock(KeyBundle.class);
+        JsonWebKey key = mock(JsonWebKey.class);
+        given(vaultService.getKeyByAlias(ALIAS)).willReturn(keyBundle);
+        given(keyBundle.key()).willReturn(key);
+        given(key.kty()).willReturn(JsonWebKeyType.OCT);
+        keyStore.engineGetKey(ALIAS, password);
+    }
+
+    /**
+     * @verifies return ec key for ec key type
+     * @see KeyVaultKeyStore#engineGetKey(String, char[])
+     */
+    @Test
+    public void engineGetKey_shouldReturnEcKeyForEcKeyType() {
+        char[] password = "password".toCharArray();
+        KeyBundle keyBundle = mock(KeyBundle.class);
+        JsonWebKey key = mock(JsonWebKey.class);
+        given(keyBundle.key()).willReturn(key);
+        given(key.kty()).willReturn(JsonWebKeyType.EC);
+        given(key.toEC(true))
+            .willReturn(new KeyPair(mock(PublicKey.class), mock(PrivateKey.class)));
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(keyBundle);
 
         keyStore.engineGetKey(ALIAS, password);
@@ -145,12 +167,15 @@ public class KeyVaultKeyStoreTest {
     @Test
     public void engineGetCertificate_shouldReturnNullWhenVaultDoesNotContainTheAlias() {
         given(vaultService.getCertificateByAlias(eq(ALIAS))).willReturn(null);
+        CertificateBundle certBundle = mock(CertificateBundle.class);
+        given(certBundle.cer()).willReturn(Base64.getDecoder().decode(DUMMY_CERT_BASE_64));
+        given(vaultService.getCertificateByAlias(eq("test"))).willReturn(certBundle);
 
         Certificate certificate = keyStore.engineGetCertificate(ALIAS);
 
         verify(vaultService).getCertificateByAlias(eq(ALIAS));
 
-        assertNull(certificate);
+        assertNotNull(certificate);
     }
 
     /**
@@ -163,12 +188,13 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies throw exception
+     * @verifies return a date
      * @see KeyVaultKeyStore#engineGetCreationDate(String)
      */
-    @Test(expected = UnsupportedOperationException.class)
-    public void engineGetCreationDate_shouldThrowException() {
-        keyStore.engineGetCreationDate(ALIAS);
+    @Test
+    public void engineGetCreationDate_shouldReturnADate() {
+        given(localKeyStore.engineGetCreationDate(any())).willReturn(new Date());
+        assertNotNull(keyStore.engineGetCreationDate(ALIAS));
     }
 
     /**
@@ -272,7 +298,7 @@ public class KeyVaultKeyStoreTest {
         given(vaultService.getCertificateByAlias(ALIAS)).willReturn(certificateBundle);
         assertTrue(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.TrustedCertificateEntry.class));
         assertTrue(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.PrivateKeyEntry.class));
-        assertTrue(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.SecretKeyEntry.class));
+        assertFalse(keyStore.engineEntryInstanceOf(ALIAS, KeyStore.SecretKeyEntry.class));
     }
 
     /**
@@ -280,7 +306,7 @@ public class KeyVaultKeyStoreTest {
      * @see KeyVaultKeyStore#engineDeleteEntry(String)
      */
     @Test
-    public void engineDeleteEntry_shouldCallDelegate() {
+    public void engineDeleteEntry_shouldCallDelegate() throws KeyStoreException {
         SecretBundle secretBundle = mock(SecretBundle.class);
         given(vaultService.deleteSecretByAlias(ALIAS)).willReturn(secretBundle);
         keyStore.engineDeleteEntry(ALIAS);
@@ -331,13 +357,13 @@ public class KeyVaultKeyStoreTest {
         SecretBundle keyBundle = new SecretBundle().withValue(DUMMY_KEY_BASE_64);
         given(vaultService.getSecretByAlias(eq("sms-transport-key"))).willReturn(keyBundle);
 
-        SecretKey key = (SecretKey)keyStore.engineGetKey("sms.transport.key", password);
+        SecretKey key = (SecretKey) keyStore.engineGetKey("sms.transport.key", password);
 
         verify(vaultService).getSecretByAlias(eq("sms-transport-key"));
 
         assertTrue(Base64.getEncoder()
-            .encodeToString(key.getEncoded())
-            .equalsIgnoreCase(DUMMY_KEY_BASE_64));
+                       .encodeToString(key.getEncoded())
+                       .equalsIgnoreCase(DUMMY_KEY_BASE_64));
     }
 
     /**
@@ -367,7 +393,7 @@ public class KeyVaultKeyStoreTest {
         char[] password = "password".toCharArray();
         given(vaultService.getSecretByAlias(eq("sms-transport-key"))).willReturn(null);
 
-        SecretKey key = (SecretKey)keyStore.engineGetKey("sms.transport.key", password);
+        SecretKey key = (SecretKey) keyStore.engineGetKey("sms.transport.key", password);
 
         verify(vaultService).getSecretByAlias(eq("sms-transport-key"));
 
@@ -399,9 +425,6 @@ public class KeyVaultKeyStoreTest {
      */
     @Test
     public void engineGetKey_shouldTrySaveSecretKeysInLocalStoreToKeyVault() throws Exception {
-        given(localKeyStore.engineIsKeyEntry(any())).willReturn(true);
-        given(localKeyStore.engineGetKey(any(), any())).willReturn(mock(SecretKeySpec.class));
-        given(vaultService.setKeyByAlias(any(), any())).willThrow(KeyStoreException.class);
         assertNull(keyStore.engineGetKey("A_KEY", "A_PASSWORD".toCharArray()));
     }
 
@@ -434,5 +457,28 @@ public class KeyVaultKeyStoreTest {
         given(vaultService.engineKeyAliases()).willReturn(Arrays.asList("1", "2", "3"));
         given(vaultService.engineCertificateAliases()).willReturn(Arrays.asList("1", "2"));
         assertEquals(keyStore.engineSize(), 5);
+    }
+
+    /**
+     * @verifies set key entry in local store
+     * @see KeyVaultKeyStore#engineSetCertificateEntry(String, Certificate)
+     */
+    @Test
+    public void engineSetCertificateEntry_shouldSetKeyEntryInLocalStore() throws Exception {
+        Certificate cert = mock(Certificate.class);
+        keyStore.engineSetCertificateEntry(ALIAS, cert);
+        verify(localKeyStore).engineSetCertificateEntry(ALIAS, cert);
+    }
+
+    /**
+     * @verifies set key entry in local store
+     * @see KeyVaultKeyStore#engineSetKeyEntry(String, byte[], Certificate[])
+     */
+    @Test
+    public void engineSetKeyEntry_shouldSetKeyEntryInLocalStore() throws Exception {
+        Certificate[] certs = new Certificate[]{mock(Certificate.class)};
+        byte[] bytes = new byte[0];
+        keyStore.engineSetKeyEntry(ALIAS, bytes, certs);
+        verify(localKeyStore).engineSetKeyEntry(ALIAS, bytes, certs);
     }
 }
