@@ -106,6 +106,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     /**
      * @should return certificate when vault contains the certificate
      * @should return null when vault does not contain the alias
+     * @should throw exception if certificate exception is thrown
      */
     @Override
     public Certificate engineGetCertificate(final String alias) {
@@ -142,33 +143,22 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     public void engineSetKeyEntry(final String alias, final Key key, final char[] password, final Certificate[] chain)
         throws KeyStoreException {
         vaultService.setKeyByAlias(alias, key);
-        localKeyStore.engineSetKeyEntry(alias, key, password, chain);
     }
 
-    /**
-     * @should set key entry in local store
-     */
     @Override
-    public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain)
-        throws KeyStoreException {
-        localKeyStore.engineSetKeyEntry(alias, key, chain);
+    public void engineSetKeyEntry(final String alias, final byte[] key, final Certificate[] chain) {
     }
 
-    /**
-     * @should set key entry in local store
-     */
     @Override
-    public void engineSetCertificateEntry(final String alias, final Certificate cert) throws KeyStoreException {
-        localKeyStore.engineSetCertificateEntry(alias, cert);
+    public void engineSetCertificateEntry(final String alias, final Certificate cert) {
     }
 
     /**
      * @should Call Delegate
      */
     @Override
-    public void engineDeleteEntry(final String alias) throws KeyStoreException {
+    public void engineDeleteEntry(final String alias) {
         vaultService.deleteSecretByAlias(alias);
-        localKeyStore.engineDeleteEntry(alias);
     }
 
     /**
@@ -267,14 +257,10 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should try engine load the stream
+     * @should engine load
      */
     @Override
-    public void engineLoad(final InputStream stream, final char[] password)
-        throws CertificateException, NoSuchAlgorithmException, IOException {
+    public void engineLoad(final InputStream stream, final char[] password) {
         vaultService = KeyVaultService.getInstance();
-        if (stream != null) {
-            localKeyStore.engineLoad(stream, password);
-        }
     }
 }
