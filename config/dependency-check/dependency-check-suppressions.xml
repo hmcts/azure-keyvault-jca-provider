@@ -34,6 +34,7 @@
         <notes>suppress false positives with databind</notes>
         <gav regex="true">^com\.fasterxml\.jackson\.core:jackson-databind.*$</gav>
         <cve>CVE-2019-20330</cve>
+        <cve>CVE-2020-8840</cve>
     </suppress>
 
     <!-- CVE-2019-10086: In Apache Commons BeanUtils 1.9.2, a special BeanIntrospector class

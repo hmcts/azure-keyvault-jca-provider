@@ -428,16 +428,6 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies try engine load the stream
-     * @see KeyVaultKeyStore#engineLoad(java.io.InputStream, char[])
-     */
-    @Test
-    public void engineLoad_shouldTryEngineLoadTheStream() throws Exception {
-        keyStore.engineLoad(mock(InputStream.class), new char[0]);
-        verify(localKeyStore).engineLoad(any(), any());
-    }
-
-    /**
      * @verifies try engine store the stream
      * @see KeyVaultKeyStore#engineStore(java.io.OutputStream, char[])
      */
@@ -459,25 +449,25 @@ public class KeyVaultKeyStoreTest {
     }
 
     /**
-     * @verifies set key entry in local store
-     * @see KeyVaultKeyStore#engineSetCertificateEntry(String, Certificate)
+     * @verifies engine load
+     * @see KeyVaultKeyStore#engineLoad(InputStream, char[])
      */
     @Test
-    public void engineSetCertificateEntry_shouldSetKeyEntryInLocalStore() throws Exception {
-        Certificate cert = mock(Certificate.class);
-        keyStore.engineSetCertificateEntry(ALIAS, cert);
-        verify(localKeyStore).engineSetCertificateEntry(ALIAS, cert);
+    public void engineLoad_shouldEngineLoad() throws Exception {
+        keyStore.engineLoad(mock(InputStream.class), new char[0]);
+        assertNull(keyStore.engineGetKey("A_KEY", "A_PASSWORD".toCharArray()));
     }
 
     /**
-     * @verifies set key entry in local store
-     * @see KeyVaultKeyStore#engineSetKeyEntry(String, byte[], Certificate[])
+     * @verifies throw exception if certificate exception is thrown
+     * @see KeyVaultKeyStore#engineGetCertificate(String)
      */
-    @Test
-    public void engineSetKeyEntry_shouldSetKeyEntryInLocalStore() throws Exception {
-        Certificate[] certs = new Certificate[]{mock(Certificate.class)};
-        byte[] bytes = new byte[0];
-        keyStore.engineSetKeyEntry(ALIAS, bytes, certs);
-        verify(localKeyStore).engineSetKeyEntry(ALIAS, bytes, certs);
+    @Test(expected = ProviderException.class)
+    public void engineGetCertificate_shouldThrowExceptionIfCertificateExceptionIsThrown() throws Exception {
+        given(vaultService.getCertificateByAlias(eq(ALIAS))).willReturn(null);
+        CertificateBundle certBundle = mock(CertificateBundle.class);
+        given(certBundle.cer()).willReturn("not a certificate".getBytes());
+        given(vaultService.getCertificateByAlias(eq("test"))).willReturn(certBundle);
+        keyStore.engineGetCertificate(ALIAS);
     }
 }
