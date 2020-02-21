@@ -260,7 +260,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      * @should engine load
      */
     @Override
-    public void engineLoad(final InputStream stream, final char[] password) {
+    public void engineLoad(final InputStream stream, final char[] password)
+        throws CertificateException, NoSuchAlgorithmException, IOException {
         vaultService = KeyVaultService.getInstance();
+        if (stream != null) {
+            localKeyStore.engineLoad(stream, password);
+        }
     }
 }
