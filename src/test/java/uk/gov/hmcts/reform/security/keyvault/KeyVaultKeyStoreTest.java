@@ -115,7 +115,7 @@ public class KeyVaultKeyStoreTest {
         JsonWebKey key = mock(JsonWebKey.class);
         given(keyBundle.key()).willReturn(key);
         given(key.kty()).willReturn(JsonWebKeyType.EC);
-        given(key.toEC(true))
+        given(key.toEC())
             .willReturn(new KeyPair(mock(PublicKey.class), mock(PrivateKey.class)));
         given(vaultService.getKeyByAlias(eq(ALIAS))).willReturn(keyBundle);
         char[] password = "password".toCharArray();

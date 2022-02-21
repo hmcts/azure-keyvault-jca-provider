@@ -65,7 +65,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
             if (JsonWebKeyType.RSA.equals(keyType) || JsonWebKeyType.RSA_HSM.equals(keyType)) {
                 return new KeyVaultRSAPrivateKey(keyBundle.keyIdentifier().identifier(), JsonWebKeyType.RSA.toString());
             } else if (JsonWebKeyType.EC.equals(keyType) || JsonWebKeyType.EC_HSM.equals(keyType)) {
-                return key.toEC(true).getPrivate();
+                return key.toEC().getPublic();
             } else {
                 throw new ProviderException("JsonWebKeyType [" + keyType + "] not implemented");
             }
