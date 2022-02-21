@@ -4,7 +4,6 @@ plugins {
   id 'jacoco'
   id 'com.github.johnrengelman.shadow' version '5.2.0'
   id 'checkstyle'
-  id 'org.owasp.dependencycheck' version '6.0.5'
   id 'com.jfrog.bintray' version '1.8.4'
 }
 
@@ -57,15 +56,6 @@ jacocoTestCoverageVerification {
       }
     }
   }
-}
-
-check.dependsOn dependencyCheckAnalyze
-// https://jeremylong.github.io/DependencyCheck/dependency-check-gradle/configuration.html
-dependencyCheck {
-  // Specifies if the build should be failed if a CVSS score above a specified level is identified.
-  // range of 0-10 fails the build, anything greater and it doesn't fail the build
-  failBuildOnCVSS = System.getProperty('dependencyCheck.failBuild') == 'false' ? 11 : 0
-  suppressionFile = 'config/dependency-check/dependency-check-suppressions.xml'
 }
 
 publishing {
