@@ -264,7 +264,9 @@ final class KeyVaultService {
     public SecretBundle deleteSecretByAlias(final String alias) {
         final String theAlias = replaceDotsWithDashes(alias);
         this.secretByAliasCache.invalidate(theAlias);
-        return this.vaultClient.deleteSecret(baseUrl, theAlias);
+        SecretBundle bundle = this.vaultClient.deleteSecret(baseUrl, theAlias);
+        this.vaultClient.purgeDeletedSecret(baseUrl, theAlias);
+        return bundle;
     }
 
     /**
