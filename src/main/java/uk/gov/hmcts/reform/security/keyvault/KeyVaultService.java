@@ -184,6 +184,7 @@ final class KeyVaultService {
                     System.out.println("Failed while trying save " + theAlias + ": "
                         + "\nmessage  : " + e.getMessage()
                         + "\nRetrying.");
+                    continue;
                 }
                 success = true;
             }
