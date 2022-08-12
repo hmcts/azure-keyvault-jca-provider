@@ -179,6 +179,7 @@ final class KeyVaultService {
                         + "\ncontinuing to set secret value.");
                 }
                 try {
+                    Thread.sleep(1000);
                     result = this.vaultClient.setSecret(secretRequest);
                 } catch (Exception e) {
                     System.out.println("Failed while trying save " + theAlias + ": "
