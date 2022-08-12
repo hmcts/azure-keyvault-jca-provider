@@ -166,6 +166,7 @@ final class KeyVaultService {
             final SetSecretRequest secretRequest = new SetSecretRequest
                 .Builder(baseUrl, theAlias, new String(jsonWebKey.k()))
                 .build();
+            try { this.vaultClient.purgeDeletedSecret(baseUrl, theAlias); } catch (Exception ignored) { }
             SecretBundle result = this.vaultClient.setSecret(secretRequest);
             if (result == null) {
                 throw new KeyStoreException("Result from KeyVault SET_SECRET was NULL for alias "
