@@ -166,14 +166,29 @@ final class KeyVaultService {
             final SetSecretRequest secretRequest = new SetSecretRequest
                 .Builder(baseUrl, theAlias, new String(jsonWebKey.k()))
                 .build();
-            try {
-                this.vaultClient.purgeDeletedSecret(baseUrl, theAlias);
-            } catch (Exception e) {
-                System.out.println("Failed while attempting to purge " + theAlias + " before saving: "
-                    + "\nmessage  : " + e.getMessage()
-                    + "\ncontinuing to set secret value.");
+            boolean success = false;
+            SecretBundle result = null;
+            while (!success) {
+                try {
+                    this.vaultClient.purgeDeletedSecret(baseUrl, theAlias);
+                    System.out.println("Purged secret from deleted state. Sleeping 10s");
+                    Thread.sleep(10000);
+                } catch (Exception e) {
+                    System.out.println("Failed while attempting to purge " + theAlias + " before saving: "
+                        + "\nmessage  : " + e.getMessage()
+                        + "\ncontinuing to set secret value.");
+                }
+                try {
+                    Thread.sleep(1000);
+                    result = this.vaultClient.setSecret(secretRequest);
+                } catch (Exception e) {
+                    System.out.println("Failed while trying save " + theAlias + ": "
+                        + "\nmessage  : " + e.getMessage()
+                        + "\nRetrying.");
+                    continue;
+                }
+                success = true;
             }
-            SecretBundle result = this.vaultClient.setSecret(secretRequest);
             if (result == null) {
                 throw new KeyStoreException("Result from KeyVault SET_SECRET was NULL for alias "
                     + theAlias);
