@@ -306,8 +306,6 @@ public class KeyVaultKeyStoreTest {
      */
     @Test
     public void engineDeleteEntry_shouldCallDelegate() throws KeyStoreException {
-        SecretBundle secretBundle = mock(SecretBundle.class);
-        given(vaultService.deleteSecretByAlias(ALIAS)).willReturn(secretBundle);
         keyStore.engineDeleteEntry(ALIAS);
         verify(vaultService).deleteSecretByAlias(ALIAS);
     }

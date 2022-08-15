@@ -4,7 +4,6 @@ import com.microsoft.azure.PagedList;
 import com.microsoft.azure.keyvault.KeyVaultClient;
 import com.microsoft.azure.keyvault.models.CertificateBundle;
 import com.microsoft.azure.keyvault.models.CertificateItem;
-import com.microsoft.azure.keyvault.models.DeletedSecretBundle;
 import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.KeyItem;
 import com.microsoft.azure.keyvault.models.SecretBundle;
@@ -214,19 +213,6 @@ public class KeyVaultServiceTest {
         listOfAliases = this.keyVaultService.engineKeyAliases();
         assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some.other.key",
             "help", "get-me", "the-hell", "outta-here"));
-    }
-
-    /**
-     * @verifies call delegate
-     * @see KeyVaultService#deleteSecretByAlias(String)
-     */
-    @Test
-    public void deleteSecretByAlias_shouldCallDelegate() {
-        DeletedSecretBundle secretBundle = mock(DeletedSecretBundle.class);
-        given(this.vaultClient.deleteSecret(BASE_URL, ALIAS)).willReturn(secretBundle);
-        SecretBundle resultBundle = this.keyVaultService.deleteSecretByAlias(ALIAS);
-        verify(vaultClient).deleteSecret(BASE_URL, ALIAS);
-        assertEquals(resultBundle, secretBundle);
     }
 
     /**

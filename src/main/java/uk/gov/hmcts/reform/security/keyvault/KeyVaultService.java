@@ -261,10 +261,9 @@ final class KeyVaultService {
     /**
      * @should call delegate
      */
-    public SecretBundle deleteSecretByAlias(final String alias) {
+    public void deleteSecretByAlias(final String alias) {
         final String theAlias = replaceDotsWithDashes(alias);
         this.secretByAliasCache.invalidate(theAlias);
-        return this.vaultClient.deleteSecret(baseUrl, theAlias);
     }
 
     /**
