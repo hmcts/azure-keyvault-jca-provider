@@ -134,7 +134,6 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Date engineGetCreationDate(final String alias) {
-        System.out.println("\tengineGetCreationDate " + alias);
         if (engineIsKeyEntry(alias)) {
             return vaultService.getKeyByAlias(alias).attributes().created().toDate();
         } else if (engineIsCertificateEntry(alias)) {
