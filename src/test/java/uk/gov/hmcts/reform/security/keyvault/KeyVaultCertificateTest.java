@@ -9,6 +9,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -202,13 +203,12 @@ public class KeyVaultCertificateTest {
     }
 
     /**
-     * @verifies call delegate
+     * @verifies return null
      * @see KeyVaultCertificate#getKeyUsage()
      */
     @Test
-    public void getKeyUsage_shouldCallDelegate() {
-        vaultCertificate.getKeyUsage();
-        verify(certificate).getKeyUsage();
+    public void getKeyUsage_shouldReturnNull() {
+        assertNull(vaultCertificate.getKeyUsage());
     }
 
     /**

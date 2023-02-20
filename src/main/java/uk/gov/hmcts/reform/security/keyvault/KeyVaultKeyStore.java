@@ -5,17 +5,15 @@ import com.microsoft.azure.keyvault.models.KeyBundle;
 import com.microsoft.azure.keyvault.models.SecretBundle;
 import com.microsoft.azure.keyvault.webkey.JsonWebKey;
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType;
-import com.sun.crypto.provider.JceKeyStore;
 
+import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.KeyStoreSpi;
-import java.security.NoSuchAlgorithmException;
 import java.security.ProviderException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -28,7 +26,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
-import javax.crypto.spec.SecretKeySpec;
 
 public final class KeyVaultKeyStore extends KeyStoreSpi {
 
@@ -36,9 +33,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
 
     private static final String SMS_TRANSPORT_KEY_DOTS = "sms.transport.key";
 
-    private KeyVaultService vaultService;
+    private static final String DS_AME_USER_PWD = "dsameUserPwd";
 
-    private KeyStoreSpi localKeyStore = new JceKeyStore();
+    private static final String CONFIG_STORE_PWD = "configStorePwd";
+
+    private KeyVaultService vaultService;
 
     /**
      * @should return rsa private key for rsa alias
@@ -96,11 +95,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should throw exception
+     * @should return a single item array
      */
     @Override
     public Certificate[] engineGetCertificateChain(final String alias) {
-        throw new UnsupportedOperationException();
+        return new Certificate[] { engineGetCertificate(alias) };
     }
 
     /**
@@ -129,11 +128,20 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     /**
-     * @should return a date
+     * @should return a date for keys
+     * @should return a date for secrets
+     * @should return a date for certificates
      */
     @Override
     public Date engineGetCreationDate(final String alias) {
-        return localKeyStore.engineGetCreationDate(alias);
+        System.out.println("\tengineGetCreationDate " + alias);
+        if (engineIsKeyEntry(alias)) {
+            return vaultService.getKeyByAlias(alias).attributes().created().toDate();
+        } else if (engineIsCertificateEntry(alias)) {
+            return vaultService.getCertificateByAlias(alias).attributes().created().toDate();
+        } else {
+            return vaultService.getSecretByAlias(alias).attributes().created().toDate();
+        }
     }
 
     /**
@@ -155,9 +163,16 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
 
     /**
      * @should Call Delegate
+     * @should never delete dsameUserPwd
+     * @should never delete configStorePwd
      */
     @Override
     public void engineDeleteEntry(final String alias) {
+        if (DS_AME_USER_PWD.equalsIgnoreCase(alias) || CONFIG_STORE_PWD.equalsIgnoreCase(alias)) {
+            // Do not let AM delete "dsameUserPwd" and "configStorePwd" secrets in KeyVault
+            // as subsequent boots will fail without any of them.
+            return;
+        }
         vaultService.deleteSecretByAlias(alias);
     }
 
@@ -247,13 +262,8 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
         throw new UnsupportedOperationException();
     }
 
-    /**
-     * @should try engine store the stream
-     */
     @Override
-    public void engineStore(final OutputStream stream, final char[] password)
-        throws IOException, NoSuchAlgorithmException, CertificateException {
-        localKeyStore.engineStore(stream, password);
+    public void engineStore(final OutputStream stream, final char[] password) {
     }
 
     /**

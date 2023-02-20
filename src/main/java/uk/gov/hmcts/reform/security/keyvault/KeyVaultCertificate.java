@@ -185,11 +185,14 @@ final class KeyVaultCertificate extends X509Certificate {
     }
 
     /**
-     * @should call delegate
+     * @should return null
      */
     @Override
     public boolean[] getKeyUsage() {
-        return certificate.getKeyUsage();
+        // Remove Extended Key Usages (EKUs) flags as ForgeRock 7.x is now checking them and might
+        // refuse to use a certificate if it hasn't been properly configured in KeyVault.
+        // NO EKUs is equivalent to disabling the checks in AM.
+        return null;
     }
 
     /**
