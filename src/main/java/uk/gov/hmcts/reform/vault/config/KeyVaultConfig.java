@@ -11,6 +11,8 @@ public class KeyVaultConfig {
 
     private String vaultBaseUrl;
 
+    private String vaultTenantId;
+
     private String vaultClientId;
 
     private String vaultClientKey;

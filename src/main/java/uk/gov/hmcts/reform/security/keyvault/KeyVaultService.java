@@ -1,25 +1,32 @@
 package uk.gov.hmcts.reform.security.keyvault;
 
+import com.azure.core.http.rest.PagedIterable;
+import com.azure.core.util.polling.PollResponse;
+import com.azure.identity.ClientSecretCredentialBuilder;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.security.keyvault.certificates.CertificateClient;
+import com.azure.security.keyvault.certificates.CertificateClientBuilder;
+import com.azure.security.keyvault.certificates.models.CertificateProperties;
+import com.azure.security.keyvault.certificates.models.KeyVaultCertificateWithPolicy;
+import com.azure.security.keyvault.keys.KeyClient;
+import com.azure.security.keyvault.keys.KeyClientBuilder;
+import com.azure.security.keyvault.keys.cryptography.CryptographyClientBuilder;
+import com.azure.security.keyvault.keys.cryptography.models.SignResult;
+import com.azure.security.keyvault.keys.cryptography.models.SignatureAlgorithm;
+import com.azure.security.keyvault.keys.models.JsonWebKey;
+import com.azure.security.keyvault.keys.models.KeyProperties;
+import com.azure.security.keyvault.keys.models.KeyVaultKey;
+import com.azure.security.keyvault.secrets.SecretClient;
+import com.azure.security.keyvault.secrets.SecretClientBuilder;
+import com.azure.security.keyvault.secrets.models.DeletedSecret;
+import com.azure.security.keyvault.secrets.models.KeyVaultSecret;
+import com.azure.security.keyvault.secrets.models.SecretProperties;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.microsoft.azure.PagedList;
-import com.microsoft.azure.keyvault.KeyVaultClient;
-import com.microsoft.azure.keyvault.models.CertificateBundle;
-import com.microsoft.azure.keyvault.models.CertificateItem;
-import com.microsoft.azure.keyvault.models.KeyBundle;
-import com.microsoft.azure.keyvault.models.KeyItem;
-import com.microsoft.azure.keyvault.models.KeyOperationResult;
-import com.microsoft.azure.keyvault.models.SecretBundle;
-import com.microsoft.azure.keyvault.models.SecretItem;
-import com.microsoft.azure.keyvault.requests.SetSecretRequest;
-import com.microsoft.azure.keyvault.webkey.JsonWebKey;
-import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
+import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import uk.gov.hmcts.reform.vault.config.KeyVaultClientProvider;
 import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
-import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
-import uk.gov.hmcts.reform.vault.credential.ClientSecretKeyVaultCredential;
 
 import java.security.Key;
 import java.security.KeyStoreException;
@@ -29,22 +36,23 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
 
 final class KeyVaultService {
     private static volatile KeyVaultService INSTANCE;
 
-    private final String baseUrl;
+    private final KeyClient keyClient;
 
-    private final KeyVaultClient vaultClient;
+    private final SecretClient secretClient;
 
-    private final LoadingCache<String, SecretBundle> secretByAliasCache;
+    private final CertificateClient certificateClient;
 
-    private final LoadingCache<String, KeyBundle> keyByAliasCache;
+    private final LoadingCache<String, KeyVaultSecret> secretByAliasCache;
 
-    private final LoadingCache<String, KeyBundle> keyByIdentifierCache;
+    private final LoadingCache<String, KeyVaultKey> keyByAliasCache;
 
-    private final LoadingCache<String, CertificateBundle> certificateByAliasCache;
+    private final LoadingCache<String, KeyVaultCertificateWithPolicy> certificateByAliasCache;
 
     private final LoadingCache<Object, List<String>> keyAliasCache;
 
@@ -75,71 +83,73 @@ final class KeyVaultService {
     }
 
     KeyVaultService(KeyVaultConfig keyVaultConfig) {
-        this(keyVaultConfig, new KeyVaultClientProvider() {
-            @Override
-            public KeyVaultClient getClient(KeyVaultConfig keyVaultConfig) {
-                if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
-                    return new KeyVaultClient(new ClientSecretKeyVaultCredential(keyVaultConfig.getVaultClientId(),
-                        keyVaultConfig.getVaultClientKey()));
-                } else if (StringUtils.isNotEmpty(keyVaultConfig.getVaultMsiUrl())) {
-                    return new KeyVaultClient(new AccessTokenKeyVaultCredential(keyVaultConfig.getVaultMsiUrl(),
-                        keyVaultConfig.getVaultErrorMaxRetries(),
-                        keyVaultConfig.getVaultErrorRetryIntervalMillis()));
-                }
+        KeyClientBuilder keyClientBuilder = new KeyClientBuilder();
+        SecretClientBuilder secretClientBuilder = new SecretClientBuilder();
+        CertificateClientBuilder certificateClientBuilder = new CertificateClientBuilder();
 
-                throw new IllegalArgumentException("System properties do not define which KeyVaultClient to create");
-            }
-        }.getClient(keyVaultConfig));
-    }
+        if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultTenantId(),
+            keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
+            ClientSecretCredentialBuilder credentialBuilder = new ClientSecretCredentialBuilder()
+                .tenantId(keyVaultConfig.getVaultTenantId())
+                .clientId(keyVaultConfig.getVaultClientId())
+                .clientSecret(keyVaultConfig.getVaultClientKey());
+            keyClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
+                .credential(credentialBuilder.build());
+            secretClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
+                .credential(credentialBuilder.build());
+            certificateClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
+                .credential(credentialBuilder.build());
+        } else if (StringUtils.isNotEmpty(keyVaultConfig.getVaultMsiUrl())) {
+            keyClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
+                .credential(new DefaultAzureCredentialBuilder().build());
+            secretClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
+                .credential(new DefaultAzureCredentialBuilder().build());
+            certificateClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
+                .credential(new DefaultAzureCredentialBuilder().build());
+        }
 
-    KeyVaultService(KeyVaultConfig keyVaultConfig, KeyVaultClient vaultClient) {
-        this.vaultClient = vaultClient;
-
-        this.baseUrl = keyVaultConfig.getVaultBaseUrl();
+        this.keyClient = keyClientBuilder.buildClient();
+        this.secretClient = secretClientBuilder.buildClient();
+        this.certificateClient = certificateClientBuilder.buildClient();
 
         this.vaultKeyToRequestKeyMappings = new ConcurrentHashMap<>();
 
         this.vaultKeyToRequestKeyMappings.put(SMS_TRANSPORT_KEY_DASHES, SMS_TRANSPORT_KEY_DOTS);
-
-        secretByAliasCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(24, TimeUnit.HOURS)
-            .build(CacheLoader
-                .from((String alias) -> vaultClient.getSecret(baseUrl, alias)));
-
-        keyByAliasCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(24, TimeUnit.HOURS)
-            .build(CacheLoader
-                .from((String alias) -> vaultClient.getKey(baseUrl, alias)));
-
-        keyByIdentifierCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(24, TimeUnit.HOURS)
-            .build(CacheLoader
-                .from(vaultClient::getKey));
-
-        certificateByAliasCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(24, TimeUnit.HOURS)
-            .build(CacheLoader
-                .from((String alias) -> vaultClient.getCertificate(baseUrl, alias)));
 
         keyAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
             .build(CacheLoader
                 .from(this::callVaultForKeyAliases));
 
+        secretByAliasCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(24, TimeUnit.HOURS)
+            .build(CacheLoader
+                .from(secretClient::getSecret));
+
+        keyByAliasCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(24, TimeUnit.HOURS)
+            .build(CacheLoader
+                .from(keyClient::getKey));
+
         certificateAliasCache = CacheBuilder.newBuilder()
             .expireAfterWrite(24, TimeUnit.HOURS)
             .build(CacheLoader
                 .from(this::callKeyVaultForCertificateAliases));
+
+        certificateByAliasCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(24, TimeUnit.HOURS)
+            .build(CacheLoader
+                .from(certificateClient::getCertificate));
     }
 
-    protected KeyVaultClient getClient() {
-        return this.vaultClient;
+    ClientHolder getClient() {
+        return new ClientHolder(secretClient, keyClient, certificateClient);
     }
 
     /**
      * @should call delegate
      */
-    KeyBundle getKeyByAlias(final String alias) {
+    KeyVaultKey getKeyByAlias(final String alias) {
         final String theAlias = replaceDotsWithDashes(alias);
         return getFromCacheOrNull(keyByAliasCache::getUnchecked, theAlias);
     }
@@ -147,7 +157,7 @@ final class KeyVaultService {
     /**
      * @should call delegate
      */
-    SecretBundle getSecretByAlias(final String alias) {
+    KeyVaultSecret getSecretByAlias(final String alias) {
         final String theAlias = replaceDotsWithDashes(alias);
         return getFromCacheOrNull(secretByAliasCache::getUnchecked, theAlias);
     }
@@ -158,19 +168,17 @@ final class KeyVaultService {
      * @should throw exception if getting key to check fails
      * @should throw exception if key is unsupported
      */
-    public SecretBundle setKeyByAlias(final String alias, final Key key) throws KeyStoreException {
+    public KeyVaultSecret setKeyByAlias(final String alias, final Key key) throws KeyStoreException {
         final String theAlias = replaceDotsWithDashes(alias);
         if (key instanceof SecretKey) {
             System.out.println("Trying to save key into KeyVault with alias " + theAlias);
             final JsonWebKey jsonWebKey = JsonWebKey.fromAes((SecretKey) key);
-            final SetSecretRequest secretRequest = new SetSecretRequest
-                .Builder(baseUrl, theAlias, new String(jsonWebKey.k()))
-                .build();
+            final KeyVaultSecret secretRequest = new KeyVaultSecret(theAlias, new String(jsonWebKey.getK()));
             boolean success = false;
-            SecretBundle result = null;
+            KeyVaultSecret result = null;
             while (!success) {
                 try {
-                    this.vaultClient.purgeDeletedSecret(baseUrl, theAlias);
+                    this.secretClient.purgeDeletedSecret(theAlias);
                     System.out.println("Purged secret from deleted state. Sleeping 10s");
                     Thread.sleep(10000);
                 } catch (Exception e) {
@@ -180,7 +188,7 @@ final class KeyVaultService {
                 }
                 try {
                     Thread.sleep(1000);
-                    result = this.vaultClient.setSecret(secretRequest);
+                    result = this.secretClient.setSecret(secretRequest);
                 } catch (Exception e) {
                     System.out.println("Failed while trying save " + theAlias + ": "
                         + "\nmessage  : " + e.getMessage()
@@ -214,13 +222,17 @@ final class KeyVaultService {
     private List<String> callVaultForKeyAliases() {
         final List<String> allKeys = new ArrayList<>();
 
-        final PagedList<SecretItem> secretItems = this.vaultClient.listSecrets(baseUrl);
-        secretItems.loadAll();
-        secretItems.forEach(item -> allKeys.add(parseAzureAliasString(item.id())));
+        final PagedIterable<String> secretItems = this.secretClient
+            .listPropertiesOfSecrets()
+            .mapPage((SecretProperties::getName));
+        secretItems.stream().collect(Collectors.toList())
+            .forEach(item -> allKeys.add(parseAzureAliasString(item)));
 
-        final PagedList<KeyItem> keyItems = this.vaultClient.listKeys(baseUrl);
-        keyItems.loadAll();
-        keyItems.forEach(item -> allKeys.add(parseAzureAliasString(item.kid())));
+        final PagedIterable<String> keyItems = this.keyClient
+            .listPropertiesOfKeys()
+            .mapPage((KeyProperties::getName));
+        keyItems.stream().collect(Collectors.toList())
+            .forEach(item -> allKeys.add(parseAzureAliasString(item)));
 
         return allKeys;
     }
@@ -235,9 +247,11 @@ final class KeyVaultService {
     private List<String> callKeyVaultForCertificateAliases() {
         final List<String> allKeys = new ArrayList<>();
 
-        final PagedList<CertificateItem> certificateItems = this.vaultClient.listCertificates(baseUrl);
-        certificateItems.loadAll();
-        certificateItems.forEach(item -> allKeys.add(parseAzureAliasString(item.id())));
+        final PagedIterable<String> certificateItems = this.certificateClient
+            .listPropertiesOfCertificates()
+            .mapPage((CertificateProperties::getName));
+        certificateItems.stream().collect(Collectors.toList())
+            .forEach(item -> allKeys.add(parseAzureAliasString(item)));
 
         return allKeys;
     }
@@ -283,26 +297,21 @@ final class KeyVaultService {
     /**
      * @should call delegate
      */
-    public SecretBundle deleteSecretByAlias(final String alias) {
+    public DeletedSecret deleteSecretByAlias(final String alias) {
         final String theAlias = replaceDotsWithDashes(alias);
         this.secretByAliasCache.invalidate(theAlias);
-        SecretBundle bundle = this.vaultClient.deleteSecret(baseUrl, theAlias);
-        this.vaultClient.purgeDeletedSecret(baseUrl, theAlias);
-        return bundle;
-    }
-
-    /**
-     * @should call delegate
-     */
-    KeyBundle getKeyByIdentifier(final String keyIdentifier) {
-        return getFromCacheOrNull(keyByIdentifierCache::getUnchecked, keyIdentifier);
+        PollResponse<DeletedSecret> bundle = this.secretClient
+            .beginDeleteSecret(theAlias)
+            .waitForCompletion();
+        this.secretClient.purgeDeletedSecret(theAlias);
+        return bundle.getValue();
     }
 
     /**
      * @should call delegate
      * @should return null if certificate is missing
      */
-    CertificateBundle getCertificateByAlias(final String alias) {
+    KeyVaultCertificateWithPolicy getCertificateByAlias(final String alias) {
         final String theAlias = replaceDotsWithDashes(alias);
         return getFromCacheOrNull(certificateByAliasCache::getUnchecked, theAlias);
     }
@@ -327,22 +336,30 @@ final class KeyVaultService {
      * @should call delegate
      * @should invalidate cache and call delegate again
      */
-    KeyOperationResult sign(final String keyIdentifier,
-                            final JsonWebKeySignatureAlgorithm algorithm,
-                            final byte[] digest) {
+    SignResult sign(final String keyIdentifier,
+                    final SignatureAlgorithm algorithm,
+                    final byte[] digest) {
         try {
-            return vaultClient.sign(keyIdentifier, algorithm, digest);
+            return new CryptographyClientBuilder()
+                .credential(
+                    new DefaultAzureCredentialBuilder()
+                        .maxRetry(3).build()
+                )
+                .keyIdentifier(keyIdentifier)
+                .buildClient()
+                .sign(algorithm, digest);
         } catch (Exception e) {
             System.out.println("Exception was thrown during signing :"
                     + "\nname     : " + e.getClass()
-                    + "\nmessage  : " + e.getMessage()
-                    + "\ninvalidating token cache and retrying.");
-            if (vaultClient.restClient().credentials()
-                instanceof AccessTokenKeyVaultCredential) {
-                ((AccessTokenKeyVaultCredential) vaultClient
-                    .restClient().credentials()).invalidateTokenCache();
-            }
-            return vaultClient.sign(keyIdentifier, algorithm, digest);
+                    + "\nmessage  : " + e.getMessage());
+            throw e;
         }
+    }
+
+    @AllArgsConstructor
+    public static final class ClientHolder {
+        public final SecretClient secretClient;
+        public final KeyClient keyClient;
+        public final CertificateClient certificateClient;
     }
 }

@@ -19,14 +19,14 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -74,21 +74,6 @@ public class KeyVaultServiceTest {
         KeyBundle keyBundle = keyVaultService.getKeyByAlias(ALIAS);
 
         verify(vaultClient).getKey(BASE_URL, ALIAS);
-        assertEquals(mock, keyBundle);
-    }
-
-    /**
-     * @verifies call delegate
-     * @see KeyVaultService#getKeyByIdentifier(String)
-     */
-    @Test
-    public void getKeyByIdentifier_shouldCallDelegate() {
-        KeyBundle mock = mock(KeyBundle.class);
-        given(vaultClient.getKey(KEY_IDENTIFIER)).willReturn(mock);
-
-        KeyBundle keyBundle = keyVaultService.getKeyByIdentifier(KEY_IDENTIFIER);
-
-        verify(vaultClient).getKey(KEY_IDENTIFIER);
         assertEquals(mock, keyBundle);
     }
 

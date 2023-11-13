@@ -1,7 +1,7 @@
 package uk.gov.hmcts.reform.security.keyvault;
 
-import com.microsoft.azure.keyvault.models.KeyOperationResult;
-import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
+import com.azure.security.keyvault.keys.cryptography.models.SignResult;
+import com.azure.security.keyvault.keys.cryptography.models.SignatureAlgorithm;
 
 import java.security.InvalidKeyException;
 import java.security.InvalidParameterException;
@@ -88,9 +88,8 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
          */
         byte[] digest = messageDigest.digest(data);
         messageDigest.reset();
-
-        KeyOperationResult result = vaultService.sign(identifier, JsonWebKeySignatureAlgorithm.RS256, digest);
-        return result.result();
+        SignResult result = vaultService.sign(identifier, SignatureAlgorithm.RS256, digest);
+        return result.getSignature();
     }
 
     /**

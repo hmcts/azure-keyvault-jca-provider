@@ -1,10 +1,10 @@
 package uk.gov.hmcts.reform.security.keyvault;
 
-import com.microsoft.azure.keyvault.models.CertificateBundle;
-import com.microsoft.azure.keyvault.models.KeyBundle;
-import com.microsoft.azure.keyvault.models.SecretBundle;
-import com.microsoft.azure.keyvault.webkey.JsonWebKey;
-import com.microsoft.azure.keyvault.webkey.JsonWebKeyType;
+import com.azure.security.keyvault.certificates.models.KeyVaultCertificateWithPolicy;
+import com.azure.security.keyvault.keys.models.JsonWebKey;
+import com.azure.security.keyvault.keys.models.KeyType;
+import com.azure.security.keyvault.keys.models.KeyVaultKey;
+import com.azure.security.keyvault.secrets.models.KeyVaultSecret;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
@@ -56,24 +56,24 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
             return getSmsTransportKey();
         }
 
-        KeyBundle keyBundle = vaultService.getKeyByAlias(alias);
+        KeyVaultKey keyBundle = vaultService.getKeyByAlias(alias);
         if (keyBundle != null) {
             // Found a key-pair for this alias
-            JsonWebKey key = keyBundle.key();
-            JsonWebKeyType keyType = key.kty();
-            if (JsonWebKeyType.RSA.equals(keyType) || JsonWebKeyType.RSA_HSM.equals(keyType)) {
-                return new KeyVaultRSAPrivateKey(keyBundle.keyIdentifier().identifier(), JsonWebKeyType.RSA.toString());
-            } else if (JsonWebKeyType.EC.equals(keyType) || JsonWebKeyType.EC_HSM.equals(keyType)) {
-                return key.toEC().getPublic();
+            JsonWebKey key = keyBundle.getKey();
+            KeyType keyType = key.getKeyType();
+            if (KeyType.RSA.equals(keyType) || KeyType.RSA_HSM.equals(keyType)) {
+                return new KeyVaultRSAPrivateKey(keyBundle.getId(), KeyType.RSA.toString());
+            } else if (KeyType.EC.equals(keyType) || KeyType.EC_HSM.equals(keyType)) {
+                return key.toEc().getPublic();
             } else {
                 throw new ProviderException("JsonWebKeyType [" + keyType + "] not implemented");
             }
         } else {
             // Try looking up a secret based on this alias
-            SecretBundle bundle = vaultService.getSecretByAlias(alias);
+            KeyVaultSecret bundle = vaultService.getSecretByAlias(alias);
             if (bundle != null) {
                 KeyStore.SecretKeyEntry entry = new KeyStore
-                    .SecretKeyEntry(new SecretKeySpec(bundle.value().getBytes(), "RAW"));
+                    .SecretKeyEntry(new SecretKeySpec(bundle.getValue().getBytes(), "RAW"));
                 return entry.getSecretKey();
             }
         }
@@ -81,10 +81,10 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     }
 
     private Key getSmsTransportKey() {
-        final SecretBundle bundle = vaultService.getSecretByAlias(SMS_TRANSPORT_KEY_DASHES);
+        final KeyVaultSecret bundle = vaultService.getSecretByAlias(SMS_TRANSPORT_KEY_DASHES);
         if (bundle != null) {
             // decode the base64 encoded string
-            byte[] decodedKey = Base64.getDecoder().decode(bundle.value());
+            byte[] decodedKey = Base64.getDecoder().decode(bundle.getValue());
             // use only first 128 bit
             decodedKey = Arrays.copyOf(decodedKey, 16);
             KeyStore.SecretKeyEntry entry = new KeyStore
@@ -109,7 +109,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Certificate engineGetCertificate(final String alias) {
-        CertificateBundle certificateBundle = vaultService.getCertificateByAlias(alias);
+        KeyVaultCertificateWithPolicy certificateBundle = vaultService.getCertificateByAlias(alias);
         if (certificateBundle == null) {
             // AM will throw exceptions if it expects a certificate and the provider does not provide one
             // "test" is an RSA cert. Requested Cert will be unavailable for signing.
@@ -119,7 +119,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
         X509Certificate certificate;
         try {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certificateBundle.cer()));
+            certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certificateBundle.getCer()));
         } catch (CertificateException e) {
             throw new ProviderException(e);
         }
@@ -135,11 +135,11 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
     @Override
     public Date engineGetCreationDate(final String alias) {
         if (engineIsKeyEntry(alias)) {
-            return vaultService.getKeyByAlias(alias).attributes().created().toDate();
+            return Date.from(vaultService.getKeyByAlias(alias).getProperties().getCreatedOn().toInstant());
         } else if (engineIsCertificateEntry(alias)) {
-            return vaultService.getCertificateByAlias(alias).attributes().created().toDate();
+            return Date.from(vaultService.getCertificateByAlias(alias).getProperties().getCreatedOn().toInstant());
         } else {
-            return vaultService.getSecretByAlias(alias).attributes().created().toDate();
+            return Date.from(vaultService.getSecretByAlias(alias).getProperties().getCreatedOn().toInstant());
         }
     }
 
