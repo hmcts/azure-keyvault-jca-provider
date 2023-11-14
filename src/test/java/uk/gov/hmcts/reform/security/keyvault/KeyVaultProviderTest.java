@@ -17,7 +17,7 @@ public class KeyVaultProviderTest {
 
     /**
      * @verifies register a KeyVault keystore
-     * @see KeyVaultProvider#setup()
+     * @see KeyVaultProvider
      */
     @Test
     public void setup_shouldRegisterAKeyVaultKeystore() throws Exception {

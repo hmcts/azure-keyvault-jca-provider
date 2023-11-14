@@ -1,9 +1,8 @@
 package uk.gov.hmcts.reform.security.keyvault;
 
+import com.azure.core.credential.TokenCredential;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.polling.PollResponse;
-import com.azure.identity.ClientSecretCredentialBuilder;
-import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.security.keyvault.certificates.CertificateClient;
 import com.azure.security.keyvault.certificates.CertificateClientBuilder;
 import com.azure.security.keyvault.certificates.models.CertificateProperties;
@@ -27,6 +26,8 @@ import com.google.common.cache.LoadingCache;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import uk.gov.hmcts.reform.vault.config.KeyVaultConfig;
+import uk.gov.hmcts.reform.vault.credential.CachedClientSecretCredential;
+import uk.gov.hmcts.reform.vault.credential.CachedDefaultAzureCredential;
 
 import java.security.Key;
 import java.security.KeyStoreException;
@@ -42,11 +43,11 @@ import javax.crypto.SecretKey;
 final class KeyVaultService {
     private static volatile KeyVaultService INSTANCE;
 
-    private final KeyClient keyClient;
+    private KeyClient keyClient;
 
-    private final SecretClient secretClient;
+    private SecretClient secretClient;
 
-    private final CertificateClient certificateClient;
+    private CertificateClient certificateClient;
 
     private final LoadingCache<String, KeyVaultSecret> secretByAliasCache;
 
@@ -59,6 +60,8 @@ final class KeyVaultService {
     private final LoadingCache<Object, List<String>> certificateAliasCache;
 
     private final Map<String, String> vaultKeyToRequestKeyMappings;
+
+    private final TokenCredential tokenCredential;
 
     private static final String SMS_TRANSPORT_KEY_DASHES = "sms-transport-key";
 
@@ -79,38 +82,42 @@ final class KeyVaultService {
     }
 
     private KeyVaultService() {
-        this(new SystemPropertyKeyVaultConfigBuilder().build());
+        this(new SystemPropertyKeyVaultConfigBuilder().build(), null);
     }
 
-    KeyVaultService(KeyVaultConfig keyVaultConfig) {
+    KeyVaultService(KeyVaultConfig keyVaultConfig, ClientHolder holder) {
+        if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultTenantId(),
+            keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
+            tokenCredential =
+                new CachedClientSecretCredential(
+                    keyVaultConfig.getVaultTenantId(),
+                    keyVaultConfig.getVaultClientId(),
+                    keyVaultConfig.getVaultClientKey());
+        } else {
+            tokenCredential = new CachedDefaultAzureCredential();
+        }
+
         KeyClientBuilder keyClientBuilder = new KeyClientBuilder();
         SecretClientBuilder secretClientBuilder = new SecretClientBuilder();
         CertificateClientBuilder certificateClientBuilder = new CertificateClientBuilder();
 
-        if (StringUtils.isNoneEmpty(keyVaultConfig.getVaultTenantId(),
-            keyVaultConfig.getVaultClientId(), keyVaultConfig.getVaultClientKey())) {
-            ClientSecretCredentialBuilder credentialBuilder = new ClientSecretCredentialBuilder()
-                .tenantId(keyVaultConfig.getVaultTenantId())
-                .clientId(keyVaultConfig.getVaultClientId())
-                .clientSecret(keyVaultConfig.getVaultClientKey());
-            keyClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
-                .credential(credentialBuilder.build());
-            secretClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
-                .credential(credentialBuilder.build());
-            certificateClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
-                .credential(credentialBuilder.build());
-        } else if (StringUtils.isNotEmpty(keyVaultConfig.getVaultMsiUrl())) {
-            keyClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
-                .credential(new DefaultAzureCredentialBuilder().build());
-            secretClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
-                .credential(new DefaultAzureCredentialBuilder().build());
-            certificateClientBuilder.vaultUrl(keyVaultConfig.getVaultMsiUrl())
-                .credential(new DefaultAzureCredentialBuilder().build());
-        }
+        keyClientBuilder.vaultUrl(keyVaultConfig.getVaultBaseUrl())
+            .credential(tokenCredential);
+        secretClientBuilder.vaultUrl(keyVaultConfig.getVaultBaseUrl())
+            .credential(tokenCredential);
+        certificateClientBuilder.vaultUrl(keyVaultConfig.getVaultBaseUrl())
+            .credential(tokenCredential);
 
         this.keyClient = keyClientBuilder.buildClient();
         this.secretClient = secretClientBuilder.buildClient();
         this.certificateClient = certificateClientBuilder.buildClient();
+
+        if (holder != null) {
+            // for testing
+            this.keyClient = holder.keyClient;
+            this.secretClient = holder.secretClient;
+            this.certificateClient = holder.certificateClient;
+        }
 
         this.vaultKeyToRequestKeyMappings = new ConcurrentHashMap<>();
 
@@ -142,7 +149,7 @@ final class KeyVaultService {
                 .from(certificateClient::getCertificate));
     }
 
-    ClientHolder getClient() {
+    ClientHolder getClients() {
         return new ClientHolder(secretClient, keyClient, certificateClient);
     }
 
@@ -340,20 +347,25 @@ final class KeyVaultService {
                     final SignatureAlgorithm algorithm,
                     final byte[] digest) {
         try {
-            return new CryptographyClientBuilder()
-                .credential(
-                    new DefaultAzureCredentialBuilder()
-                        .maxRetry(3).build()
-                )
-                .keyIdentifier(keyIdentifier)
-                .buildClient()
-                .sign(algorithm, digest);
+            return buildClientAndSign(keyIdentifier, algorithm, digest);
         } catch (Exception e) {
             System.out.println("Exception was thrown during signing :"
-                    + "\nname     : " + e.getClass()
-                    + "\nmessage  : " + e.getMessage());
-            throw e;
+                + "\nname     : " + e.getClass()
+                + "\nmessage  : " + e.getMessage()
+                + "\ninvalidating token cache and retrying.");
+            if (tokenCredential instanceof CachedDefaultAzureCredential) {
+                ((CachedDefaultAzureCredential) tokenCredential).invalidateTokenCache();
+            }
+            return this.buildClientAndSign(keyIdentifier, algorithm, digest);
         }
+    }
+
+    private SignResult buildClientAndSign(String keyIdentifier, SignatureAlgorithm algorithm, byte[] digest) {
+        return new CryptographyClientBuilder()
+            .credential(tokenCredential)
+            .keyIdentifier(keyIdentifier)
+            .buildClient()
+            .sign(algorithm, digest);
     }
 
     @AllArgsConstructor

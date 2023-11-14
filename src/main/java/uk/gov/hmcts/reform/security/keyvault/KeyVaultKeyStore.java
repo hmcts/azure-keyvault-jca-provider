@@ -6,7 +6,6 @@ import com.azure.security.keyvault.keys.models.KeyType;
 import com.azure.security.keyvault.keys.models.KeyVaultKey;
 import com.azure.security.keyvault.secrets.models.KeyVaultSecret;
 
-import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,6 +25,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+import javax.crypto.spec.SecretKeySpec;
 
 public final class KeyVaultKeyStore extends KeyStoreSpi {
 
@@ -99,7 +99,7 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
      */
     @Override
     public Certificate[] engineGetCertificateChain(final String alias) {
-        return new Certificate[] { engineGetCertificate(alias) };
+        return new Certificate[]{engineGetCertificate(alias)};
     }
 
     /**
@@ -119,7 +119,9 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
         X509Certificate certificate;
         try {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certificateBundle.getCer()));
+            certificate = (X509Certificate) cf.generateCertificate(
+                new ByteArrayInputStream(certificateBundle.getCer())
+            );
         } catch (CertificateException e) {
             throw new ProviderException(e);
         }
@@ -245,9 +247,9 @@ public final class KeyVaultKeyStore extends KeyStoreSpi {
         if (entryClass == KeyStore.TrustedCertificateEntry.class) {
             return engineIsCertificateEntry(alias);
         } else if (entryClass == KeyStore.PrivateKeyEntry.class) {
-            return  vaultService.getKeyByAlias(alias) != null;
+            return vaultService.getKeyByAlias(alias) != null;
         } else if (entryClass == KeyStore.SecretKeyEntry.class) {
-            return  !engineIsCertificateEntry(alias)
+            return !engineIsCertificateEntry(alias)
                 && vaultService.getSecretByAlias(alias) != null;
         }
         return false;
