@@ -9,6 +9,7 @@ import com.azure.security.keyvault.certificates.models.CertificateProperties;
 import com.azure.security.keyvault.certificates.models.KeyVaultCertificateWithPolicy;
 import com.azure.security.keyvault.keys.KeyClient;
 import com.azure.security.keyvault.keys.KeyClientBuilder;
+import com.azure.security.keyvault.keys.cryptography.CryptographyClient;
 import com.azure.security.keyvault.keys.cryptography.CryptographyClientBuilder;
 import com.azure.security.keyvault.keys.cryptography.models.SignResult;
 import com.azure.security.keyvault.keys.cryptography.models.SignatureAlgorithm;
@@ -32,6 +33,7 @@ import uk.gov.hmcts.reform.vault.credential.CachedDefaultAzureCredential;
 import java.security.Key;
 import java.security.KeyStoreException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,6 +62,8 @@ final class KeyVaultService {
     private final LoadingCache<Object, List<String>> certificateAliasCache;
 
     private final Map<String, String> vaultKeyToRequestKeyMappings;
+
+    private static final Map<String, CryptographyClient> CRYPTO_CLIENT_MAP = new HashMap<>();
 
     private final TokenCredential tokenCredential;
 
@@ -361,10 +365,15 @@ final class KeyVaultService {
     }
 
     private SignResult buildClientAndSign(String keyIdentifier, SignatureAlgorithm algorithm, byte[] digest) {
-        return new CryptographyClientBuilder()
-            .credential(tokenCredential)
-            .keyIdentifier(keyIdentifier)
-            .buildClient()
+        String mapKey = keyIdentifier + ":" + algorithm;
+        if (!CRYPTO_CLIENT_MAP.containsKey(mapKey)) {
+            System.out.println("CRYPTO CLIENT NOT FOUND, ADDING TO MAP. IDENTIFIER : " + mapKey);
+            CRYPTO_CLIENT_MAP.put(mapKey, new CryptographyClientBuilder()
+                .credential(tokenCredential)
+                .keyIdentifier(keyIdentifier)
+                .buildClient());
+        }
+        return CRYPTO_CLIENT_MAP.get(mapKey)
             .sign(algorithm, digest);
     }
 
