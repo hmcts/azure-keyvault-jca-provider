@@ -10,7 +10,7 @@ public class KeyVaultMD5withRSASignatureTest extends KeyVaultRSASignatureTest {
 
     @Before
     public void setUp() {
-        System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_BASE_URL, "BASE_URL");
+        System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_BASE_URL, "https://www.BASE_URL.com");
         System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_CLIENT_ID, "CLIENT_ID");
         System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_CLIENT_KEY, "CLIENT_KEY");
     }

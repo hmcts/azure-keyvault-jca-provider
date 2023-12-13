@@ -1,7 +1,7 @@
 package uk.gov.hmcts.reform.security.keyvault;
 
-import com.microsoft.azure.keyvault.models.KeyOperationResult;
-import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
+import com.azure.security.keyvault.keys.cryptography.models.SignResult;
+import com.azure.security.keyvault.keys.cryptography.models.SignatureAlgorithm;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,7 +23,7 @@ abstract class KeyVaultRSASignatureTest {
 
     @Before
     public void setUp() {
-        System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_BASE_URL, "BASE_URL");
+        System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_BASE_URL, "https://www.BASE_URL.com");
         System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_CLIENT_ID, "CLIENT_ID");
         System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_CLIENT_KEY, "CLIENT_KEY");
     }
@@ -127,11 +127,11 @@ abstract class KeyVaultRSASignatureTest {
     public void engineSign_shouldSignData() throws Exception {
 
         KeyVaultRSAPrivateKey keyMock = mock(KeyVaultRSAPrivateKey.class);
-        KeyOperationResult resultMock = mock(KeyOperationResult.class);
+        SignResult resultMock = mock(SignResult.class);
 
         given(keyMock.getIdentifier()).willReturn("id");
-        given(vaultService.sign(eq("id"), eq(JsonWebKeySignatureAlgorithm.RS256), any())).willReturn(resultMock);
-        given(resultMock.result()).willReturn(new byte[0]);
+        given(vaultService.sign(eq("id"), eq(SignatureAlgorithm.RS256), any())).willReturn(resultMock);
+        given(resultMock.getSignature()).willReturn(new byte[0]);
 
         byte[] rawData = "message".getBytes();
         KeyVaultRSASignature keyVaultRSASignature = getMockInjectedSignature();
@@ -140,7 +140,7 @@ abstract class KeyVaultRSASignatureTest {
         byte[] signedData = keyVaultRSASignature.engineSign();
 
         verify(keyMock).getIdentifier();
-        verify(vaultService).sign(eq("id"), eq(JsonWebKeySignatureAlgorithm.RS256), any());
+        verify(vaultService).sign(eq("id"), eq(SignatureAlgorithm.RS256), any());
 
         Assert.assertArrayEquals(new byte[0], signedData);
     }

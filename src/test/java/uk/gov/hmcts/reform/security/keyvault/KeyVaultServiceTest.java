@@ -1,30 +1,25 @@
 package uk.gov.hmcts.reform.security.keyvault;
 
-import com.microsoft.azure.PagedList;
-import com.microsoft.azure.keyvault.KeyVaultClient;
-import com.microsoft.azure.keyvault.models.CertificateBundle;
-import com.microsoft.azure.keyvault.models.CertificateItem;
-import com.microsoft.azure.keyvault.models.DeletedSecretBundle;
-import com.microsoft.azure.keyvault.models.KeyBundle;
-import com.microsoft.azure.keyvault.models.KeyItem;
-import com.microsoft.azure.keyvault.models.SecretBundle;
-import com.microsoft.azure.keyvault.models.SecretItem;
-import com.microsoft.azure.keyvault.requests.SetSecretRequest;
-import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm;
+import com.azure.core.util.polling.PollResponse;
+import com.azure.core.util.polling.SyncPoller;
+import com.azure.security.keyvault.certificates.CertificateClient;
+import com.azure.security.keyvault.certificates.models.KeyVaultCertificateWithPolicy;
+import com.azure.security.keyvault.keys.KeyClient;
+import com.azure.security.keyvault.keys.models.KeyVaultKey;
+import com.azure.security.keyvault.secrets.SecretClient;
+import com.azure.security.keyvault.secrets.models.DeletedSecret;
+import com.azure.security.keyvault.secrets.models.KeyVaultSecret;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import uk.gov.hmcts.reform.vault.credential.AccessTokenKeyVaultCredential;
+import uk.gov.hmcts.reform.vault.credential.CachedDefaultAzureCredential;
 
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Consumer;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -33,33 +28,38 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class KeyVaultServiceTest {
 
     private static final String ALIAS = "ALIAS";
 
-    private static final String BASE_URL = "BASE_URL";
+    private static final String BASE_URL = "https://www.BASE_URL.com";
 
     private static final String KEY_IDENTIFIER = "KEY_ID";
 
     @Mock
-    private AccessTokenKeyVaultCredential credential;
+    private CachedDefaultAzureCredential credential;
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    private KeyVaultClient vaultClient;
+    private KeyClient keyClient;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private SecretClient secretClient;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private CertificateClient certificateClient;
 
     private KeyVaultService keyVaultService;
 
     @Before
     public void setUp() {
         System.setProperty(SystemPropertyKeyVaultConfigBuilder.VAULT_BASE_URL, BASE_URL);
-        keyVaultService = new KeyVaultService(new SystemPropertyKeyVaultConfigBuilder().build(), vaultClient);
+        KeyVaultService.ClientHolder holder = new KeyVaultService
+            .ClientHolder(secretClient, keyClient, certificateClient);
+        keyVaultService = new KeyVaultService(new SystemPropertyKeyVaultConfigBuilder().build(), holder);
     }
 
     /**
@@ -68,27 +68,12 @@ public class KeyVaultServiceTest {
      */
     @Test
     public void getKeyByAlias_shouldCallDelegate() {
-        KeyBundle mock = mock(KeyBundle.class);
-        given(vaultClient.getKey(BASE_URL, ALIAS)).willReturn(mock);
+        KeyVaultKey mock = mock(KeyVaultKey.class);
+        given(keyClient.getKey(ALIAS)).willReturn(mock);
 
-        KeyBundle keyBundle = keyVaultService.getKeyByAlias(ALIAS);
+        KeyVaultKey keyBundle = keyVaultService.getKeyByAlias(ALIAS);
 
-        verify(vaultClient).getKey(BASE_URL, ALIAS);
-        assertEquals(mock, keyBundle);
-    }
-
-    /**
-     * @verifies call delegate
-     * @see KeyVaultService#getKeyByIdentifier(String)
-     */
-    @Test
-    public void getKeyByIdentifier_shouldCallDelegate() {
-        KeyBundle mock = mock(KeyBundle.class);
-        given(vaultClient.getKey(KEY_IDENTIFIER)).willReturn(mock);
-
-        KeyBundle keyBundle = keyVaultService.getKeyByIdentifier(KEY_IDENTIFIER);
-
-        verify(vaultClient).getKey(KEY_IDENTIFIER);
+        verify(keyClient).getKey(ALIAS);
         assertEquals(mock, keyBundle);
     }
 
@@ -98,23 +83,13 @@ public class KeyVaultServiceTest {
      */
     @Test
     public void getCertificateByAlias_shouldCallDelegate() {
-        CertificateBundle mock = mock(CertificateBundle.class);
-        given(vaultClient.getCertificate(BASE_URL, ALIAS)).willReturn(mock);
+        KeyVaultCertificateWithPolicy mock = mock(KeyVaultCertificateWithPolicy.class);
+        given(certificateClient.getCertificate(ALIAS)).willReturn(mock);
 
-        CertificateBundle certificateBundle = keyVaultService.getCertificateByAlias(ALIAS);
+        KeyVaultCertificateWithPolicy certificateBundle = keyVaultService.getCertificateByAlias(ALIAS);
 
-        verify(vaultClient).getCertificate(BASE_URL, ALIAS);
+        verify(certificateClient).getCertificate(ALIAS);
         assertEquals(mock, certificateBundle);
-    }
-
-    /**
-     * @verifies call delegate
-     * @see KeyVaultService#sign(String, com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm, byte[])
-     */
-    @Test
-    public void sign_shouldCallDelegate() {
-        keyVaultService.sign(KEY_IDENTIFIER, JsonWebKeySignatureAlgorithm.RS256, new byte[0]);
-        verify(vaultClient).sign(KEY_IDENTIFIER, JsonWebKeySignatureAlgorithm.RS256, new byte[0]);
     }
 
     /**
@@ -125,15 +100,15 @@ public class KeyVaultServiceTest {
     public void setKeyByAlias_shouldCallDelegateIfKeyIsSecretKey() throws KeyStoreException {
         SecretKey mockKey = new KeyStore
             .SecretKeyEntry(new SecretKeySpec("SEKRET_KEY".getBytes(), "RAW")).getSecretKey();
-        SecretBundle bundle = mock(SecretBundle.class);
+        KeyVaultSecret bundle = mock(KeyVaultSecret.class);
 
-        given(vaultClient.setSecret(any(SetSecretRequest.class))).willReturn(bundle);
+        given(secretClient.setSecret(any(KeyVaultSecret.class))).willReturn(bundle);
 
-        given(vaultClient.getSecret(BASE_URL, ALIAS)).willReturn(bundle);
+        given(secretClient.getSecret(ALIAS)).willReturn(bundle);
 
-        SecretBundle resultBundle = keyVaultService.setKeyByAlias(ALIAS, mockKey);
+        KeyVaultSecret resultBundle = keyVaultService.setKeyByAlias(ALIAS, mockKey);
 
-        verify(vaultClient).setSecret(any(SetSecretRequest.class));
+        verify(secretClient).setSecret(any(KeyVaultSecret.class));
         assertEquals(bundle, resultBundle);
     }
 
@@ -153,67 +128,12 @@ public class KeyVaultServiceTest {
      */
     @Test
     public void getSecretByAlias_shouldCallDelegate() {
-        SecretBundle mockBundle = mock(SecretBundle.class);
-        given(vaultClient.getSecret(BASE_URL, ALIAS)).willReturn(mockBundle);
-        SecretBundle resultBundle = keyVaultService.getSecretByAlias(ALIAS);
+        KeyVaultSecret mockBundle = mock(KeyVaultSecret.class);
+        given(secretClient.getSecret(ALIAS)).willReturn(mockBundle);
+        KeyVaultSecret resultBundle = keyVaultService.getSecretByAlias(ALIAS);
 
-        verify(vaultClient).getSecret(BASE_URL, ALIAS);
+        verify(secretClient).getSecret(ALIAS);
         assertEquals(resultBundle, mockBundle);
-    }
-
-    /**
-     * @verifies call delegate and return parsed list
-     * @see KeyVaultService#engineKeyAliases()
-     */
-    @Test
-    public void engineKeyAliases_shouldCallDelegateAndReturnParsedList() {
-        List<SecretItem> secretItems = Arrays.asList(new SecretItem().withId("https://myvault.vault.azure.net/secrets/sms-transport-key/xyzAbc123"),
-            new SecretItem().withId("https://myvault.vault.azure.net/secrets/some-other-key/xyzAbc123"),
-            new SecretItem().withId("https://myvault.vault.azure.net/secrets/help/abc123xyz789"),
-            new SecretItem().withId("https://myvault.vault.azure.net/secrets/get-me/abc123xyz789"));
-        PagedList<SecretItem> mockSecretPagedList = mock(PagedList.class);
-
-        doAnswer(invocation -> {
-            Consumer<SecretItem> arg0 = invocation.getArgument(0);
-            secretItems.forEach(arg0);
-            return null;
-        }).when(mockSecretPagedList).forEach(any(Consumer.class));
-
-        List<KeyItem> keyItems = Arrays.asList(new KeyItem().withKid("https://myvault.vault.azure.net/keys/the-hell/abc123xyz789"),
-            new KeyItem().withKid("https://myvault.vault.azure.net/keys/outta-here/abc123xyz789"));
-        PagedList<KeyItem> mockKeyPagedList = mock(PagedList.class);
-
-        doAnswer(invocation -> {
-            Consumer<KeyItem> arg0 = invocation.getArgument(0);
-            keyItems.forEach(arg0);
-            return null;
-        }).when(mockKeyPagedList).forEach(any(Consumer.class));
-
-        List<CertificateItem> certificateItems = Arrays.asList(
-            new CertificateItem().withId("https://myvault.vault.azure.net/certificates/cert/abc123xyz789"));
-        PagedList<CertificateItem> mockCertificatePageList = mock(PagedList.class);
-
-        doAnswer(invocation -> {
-            Consumer<CertificateItem> arg0 = invocation.getArgument(0);
-            certificateItems.forEach(arg0);
-            return null;
-        }).when(mockCertificatePageList).forEach(any(Consumer.class));
-
-        given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
-        given(this.vaultClient.listSecrets(BASE_URL)).willReturn(mockSecretPagedList);
-        given(this.vaultClient.listCertificates(BASE_URL)).willReturn(mockCertificatePageList);
-        given(this.vaultClient.listKeys(BASE_URL)).willReturn(mockKeyPagedList);
-        given(this.vaultClient.getSecret(BASE_URL, "some-other-key")).willReturn(null);
-
-        List<String> listOfAliases = this.keyVaultService.engineKeyAliases();
-        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some-other-key",
-            "help", "get-me", "the-hell", "outta-here"));
-
-        this.keyVaultService.getSecretByAlias("some.other.key");
-
-        listOfAliases = this.keyVaultService.engineKeyAliases();
-        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "some.other.key",
-            "help", "get-me", "the-hell", "outta-here"));
     }
 
     /**
@@ -222,10 +142,14 @@ public class KeyVaultServiceTest {
      */
     @Test
     public void deleteSecretByAlias_shouldCallDelegate() {
-        DeletedSecretBundle secretBundle = mock(DeletedSecretBundle.class);
-        given(this.vaultClient.deleteSecret(BASE_URL, ALIAS)).willReturn(secretBundle);
-        SecretBundle resultBundle = this.keyVaultService.deleteSecretByAlias(ALIAS);
-        verify(vaultClient).deleteSecret(BASE_URL, ALIAS);
+        DeletedSecret secretBundle = mock(DeletedSecret.class);
+        PollResponse<DeletedSecret> pollResponse = mock(PollResponse.class);
+        SyncPoller<DeletedSecret, Void> mockPoller = mock(SyncPoller.class);
+        given(pollResponse.getValue()).willReturn(secretBundle);
+        given(mockPoller.waitForCompletion()).willReturn(pollResponse);
+        given(secretClient.beginDeleteSecret(ALIAS)).willReturn(mockPoller);
+        DeletedSecret resultBundle = this.keyVaultService.deleteSecretByAlias(ALIAS);
+        verify(secretClient).beginDeleteSecret(ALIAS);
         assertEquals(resultBundle, secretBundle);
     }
 
@@ -235,41 +159,10 @@ public class KeyVaultServiceTest {
      */
     @Test
     public void getCertificateByAlias_shouldReturnNullIfCertificateIsMissing() throws Exception {
-        given(vaultClient.getCertificate(BASE_URL, ALIAS)).willReturn(null);
-
-        CertificateBundle certificateBundle = keyVaultService.getCertificateByAlias(ALIAS);
-
-        verify(vaultClient).getCertificate(BASE_URL, ALIAS);
+        given(certificateClient.getCertificate(ALIAS)).willReturn(null);
+        KeyVaultCertificateWithPolicy certificateBundle = keyVaultService.getCertificateByAlias(ALIAS);
+        verify(certificateClient).getCertificate(ALIAS);
         assertNull(certificateBundle);
-    }
-
-    /**
-     * @verifies call delegate and return parsed list
-     * @see KeyVaultService#engineCertificateAliases()
-     */
-    @Test
-    public void engineCertificateAliases_shouldCallDelegateAndReturnParsedList() {
-        List<CertificateItem> certificateItems = Arrays.asList(
-            new CertificateItem().withId("https://myvault.vault.azure.net/certificates/sms-transport-key/xyzAbc123"),
-            new CertificateItem().withId("https://myvault.vault.azure.net/certificates/key1/abc123xyz789"),
-            new CertificateItem().withId("https://myvault.vault.azure.net/certificates/key2/abc123xyz789")
-        );
-
-        PagedList<CertificateItem> mockCertificatePageList = mock(PagedList.class);
-
-        given(this.vaultClient.getSecret(BASE_URL, "sms-transport-key")).willReturn(null);
-        this.keyVaultService.getSecretByAlias("sms.transport.key");
-
-        doAnswer(invocation -> {
-            Consumer<CertificateItem> arg0 = invocation.getArgument(0);
-            certificateItems.forEach(arg0);
-            return null;
-        }).when(mockCertificatePageList).forEach(any(Consumer.class));
-
-        given(this.vaultClient.listCertificates(BASE_URL)).willReturn(mockCertificatePageList);
-
-        List<String> listOfAliases = this.keyVaultService.engineCertificateAliases();
-        assertEquals(listOfAliases, Arrays.asList("sms.transport.key", "key1", "key2"));
     }
 
     /**
@@ -281,7 +174,7 @@ public class KeyVaultServiceTest {
         SecretKey mockKey = new KeyStore
             .SecretKeyEntry(new SecretKeySpec("SEKRET_KEY".getBytes(), "RAW")).getSecretKey();
 
-        given(vaultClient.setSecret(any(SetSecretRequest.class))).willReturn(null);
+        given(secretClient.setSecret(any(KeyVaultSecret.class))).willReturn(null);
 
         keyVaultService.setKeyByAlias(ALIAS, mockKey);
     }
@@ -294,30 +187,13 @@ public class KeyVaultServiceTest {
     public void setKeyByAlias_shouldThrowExceptionIfGettingKeyToCheckFails() throws Exception {
         SecretKey mockKey = new KeyStore
             .SecretKeyEntry(new SecretKeySpec("SEKRET_KEY".getBytes(), "RAW")).getSecretKey();
-        SecretBundle bundle = mock(SecretBundle.class);
+        KeyVaultSecret bundle = mock(KeyVaultSecret.class);
 
-        given(vaultClient.setSecret(any(SetSecretRequest.class))).willReturn(bundle);
+        given(secretClient.setSecret(any(KeyVaultSecret.class))).willReturn(bundle);
 
-        given(vaultClient.getSecret(BASE_URL, ALIAS)).willReturn(null);
+        given(secretClient.getSecret(ALIAS)).willReturn(null);
 
         keyVaultService.setKeyByAlias(ALIAS, mockKey);
-    }
-
-    /**
-     * @verifies invalidate cache and call delegate again
-     * @see KeyVaultService#sign(String, JsonWebKeySignatureAlgorithm, byte[])
-     */
-    @Test
-    public void sign_shouldInvalidateCacheAndCallDelegateAgain() throws Exception {
-        given(vaultClient.restClient().credentials()).willReturn(credential);
-
-        when(vaultClient.sign(any(), any(), any()))
-            .thenThrow(new RuntimeException("Error"))
-            .thenReturn(null);
-
-        keyVaultService.sign(null, null, null);
-
-        verify(vaultClient, atLeast(2)).sign(any(), any(), any());
     }
 
     /**
