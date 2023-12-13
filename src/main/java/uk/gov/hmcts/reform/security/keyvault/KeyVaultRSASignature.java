@@ -3,6 +3,8 @@ package uk.gov.hmcts.reform.security.keyvault;
 import com.azure.security.keyvault.keys.cryptography.models.SignResult;
 import com.azure.security.keyvault.keys.cryptography.models.SignatureAlgorithm;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.InvalidKeyException;
 import java.security.InvalidParameterException;
 import java.security.MessageDigest;
@@ -52,7 +54,21 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
         if (!(privateKey instanceof KeyVaultRSAPrivateKey)) {
             throw new InvalidKeyException("PrivateKey must be an instance of " + KeyVaultRSAPrivateKey.class.getName());
         }
-        identifier = ((KeyVaultKey) privateKey).getIdentifier();
+        identifier = clearVersionFromKey(((KeyVaultKey) privateKey).getIdentifier());
+    }
+
+    private String clearVersionFromKey(String keyId) {
+        if (keyId != null && keyId.length() > 0) {
+            try {
+                URL url = new URL(keyId);
+                String[] tokens = url.getPath().split("/");
+                String version = (tokens.length >= 4 ? tokens[3] : "");
+                return keyId.replace(version, "");
+            } catch (MalformedURLException e) {
+                System.out.println("Malformed URL Key Identifier : " + keyId);
+            }
+        }
+        return keyId;
     }
 
     /**
