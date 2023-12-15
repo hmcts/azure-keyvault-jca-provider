@@ -3,6 +3,8 @@ package uk.gov.hmcts.reform.security.keyvault;
 import com.azure.security.keyvault.keys.cryptography.models.SignResult;
 import com.azure.security.keyvault.keys.cryptography.models.SignatureAlgorithm;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.security.InvalidKeyException;
 import java.security.InvalidParameterException;
 import java.security.MessageDigest;
@@ -11,6 +13,8 @@ import java.security.PrivateKey;
 import java.security.ProviderException;
 import java.security.PublicKey;
 import java.security.SignatureSpi;
+import java.util.HashMap;
+import java.util.Map;
 
 public abstract class KeyVaultRSASignature extends SignatureSpi {
 
@@ -21,6 +25,8 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
     private final MessageDigest messageDigest;
 
     private final KeyVaultService vaultService;
+
+    private static final Map<PrivateKey, String> KEY_IDENTIFIER_MAP = new HashMap<>();
 
     KeyVaultRSASignature(String algorithm) {
         this(algorithm, KeyVaultService.getInstance());
@@ -52,7 +58,25 @@ public abstract class KeyVaultRSASignature extends SignatureSpi {
         if (!(privateKey instanceof KeyVaultRSAPrivateKey)) {
             throw new InvalidKeyException("PrivateKey must be an instance of " + KeyVaultRSAPrivateKey.class.getName());
         }
-        identifier = ((KeyVaultKey) privateKey).getIdentifier();
+        if (!KEY_IDENTIFIER_MAP.containsKey(privateKey)) {
+            System.out.println("KEY IDENTIFIER NOT FOUND, ADDING TO MAP. KEY IDENTIFIER : " + privateKey);
+            KEY_IDENTIFIER_MAP.put(privateKey, clearVersionFromKey(((KeyVaultKey) privateKey).getIdentifier()));
+        }
+        identifier = KEY_IDENTIFIER_MAP.get(privateKey);
+    }
+
+    protected String clearVersionFromKey(String keyId) {
+        if (keyId != null && keyId.length() > 0) {
+            try {
+                URL url = new URL(keyId);
+                String[] tokens = url.getPath().split("/");
+                String version = (tokens.length >= 4 ? tokens[3] : "");
+                return keyId.replace(version, "");
+            } catch (MalformedURLException e) {
+                System.out.println("Malformed URL Key Identifier : " + keyId);
+            }
+        }
+        return keyId;
     }
 
     /**

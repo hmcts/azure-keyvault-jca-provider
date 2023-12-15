@@ -9,6 +9,7 @@ import org.mockito.Mock;
 
 import java.security.InvalidKeyException;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
@@ -143,5 +144,13 @@ abstract class KeyVaultRSASignatureTest {
         verify(vaultService).sign(eq("id"), eq(SignatureAlgorithm.RS256), any());
 
         Assert.assertArrayEquals(new byte[0], signedData);
+    }
+
+    @Test
+    public void clearVersionFromKey_shouldClearTheVersionFromURLs() throws Exception {
+        String mockKey = "https://mockvault.vault.azure.net/keys/mockkey/mockkeyversion";
+        KeyVaultRSASignature keyVaultRSASignature = getMockInjectedSignature();
+        String clearedKey = keyVaultRSASignature.clearVersionFromKey(mockKey);
+        assertEquals("https://mockvault.vault.azure.net/keys/mockkey/", clearedKey);
     }
 }
